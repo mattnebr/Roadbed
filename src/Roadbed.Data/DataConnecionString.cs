@@ -147,10 +147,6 @@ public class DataConnecionString
     {
         string template = $$"""
             Data Source={{this.DatabaseSource}};
-            Version=3;
-            Compress=True;
-            BinaryGUID=false;
-            UTF8Encoding=True;
             Foreign Keys=true;
             Pooling=true;
             Default Timeout={{this.TimeoutInSeconds}};

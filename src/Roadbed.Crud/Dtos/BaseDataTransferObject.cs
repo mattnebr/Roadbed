@@ -4,6 +4,7 @@
 namespace Roadbed.Crud;
 
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using Newtonsoft.Json;
 
 /// <summary>
@@ -35,6 +36,7 @@ public abstract record BaseDataTransferObject<TId>
     }
 
     /// <inheritdoc />
+    [Column("id")]
     [JsonProperty("id")]
     public virtual TId? Id
     {

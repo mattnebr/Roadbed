@@ -411,4 +411,3 @@ public class DataSyncJob : BaseSchedulingJob<DataSyncJob>
 }
 ```
 
-That's it! Your jobs are automatically discovered, registered, and scheduled. No manual Quartz.NET configuration required! 🎉

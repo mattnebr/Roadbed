@@ -141,6 +141,48 @@ public static class SqliteExecutor
         return await QuerySingleOrDefaultWithRetryAsync<T>(request, connectionFactory, logger, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Executes a query and returns a scalar value asynchronously with optional retry logic.
+    /// </summary>
+    /// <typeparam name="T">The type of scalar value to return.</typeparam>
+    /// <param name="request">The request containing query, parameters, and retry configuration.</param>
+    /// <param name="connectionFactory">Connection factory for database access.</param>
+    /// <param name="logger">Logger for diagnostics and retry tracking. Defaults to NullLogger if not provided.</param>
+    /// <param name="cancellationToken">Token to notify when an operation should be canceled.</param>
+    /// <returns>The scalar value from the first column of the first row.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if request or connectionFactory is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if all retries are exhausted.</exception>
+    public static async Task<T> ExecuteScalarAsync<T>(
+        DataExecutorRequest request,
+        IDataConnectionFactory connectionFactory,
+        ILogger? logger = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(connectionFactory);
+
+        logger ??= NullLogger.Instance;
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("Executing command: {Query}", TruncateQuery(request.Query));
+        }
+
+        if (!request.RetriesEnabled)
+        {
+            // No retry logic - execute once
+            using (var dbConnection = await connectionFactory.CreateOpenConnectionAsync(cancellationToken).ConfigureAwait(false))
+            {
+                return await dbConnection
+                    .ExecuteScalarAsync<T>(request.Query, request.Parameters)
+                    .ConfigureAwait(false);
+            }
+        }
+
+        // Execute with retry logic - pass logger
+        return await ExecuteScalarWithRetryAsync<T>(request, connectionFactory, logger, cancellationToken).ConfigureAwait(false);
+    }
+
     #endregion Public Methods
 
     #region Private Methods
@@ -370,6 +412,82 @@ public static class SqliteExecutor
 
         throw new InvalidOperationException(
             $"Failed to execute query after {request.MaxRetries} retries.",
+            lastException);
+    }
+
+    /// <summary>
+    /// Executes a scalar query with retry logic.
+    /// </summary>
+    [SuppressMessage(
+        "Minor Code Smell",
+        "S6667:Logging in a catch clause should pass the caught exception as a parameter.",
+        Justification = "Last exception logged as Error outside of catch block.")]
+    private static async Task<T> ExecuteScalarWithRetryAsync<T>(
+        DataExecutorRequest request,
+        IDataConnectionFactory connectionFactory,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        int attempt = 0;
+        Exception? lastException = null;
+
+        while (attempt <= request.MaxRetries)
+        {
+            try
+            {
+                using (var dbConnection = await connectionFactory
+                    .CreateOpenConnectionAsync(cancellationToken)
+                    .ConfigureAwait(false))
+                {
+                    var result = await dbConnection
+                        .ExecuteScalarAsync<T>(request.Query, request.Parameters)
+                        .ConfigureAwait(false);
+
+                    if (attempt > 0)
+                    {
+                        if (logger.IsEnabled(LogLevel.Information))
+                        {
+                            logger.LogInformation(
+                                "Query succeeded on attempt {Attempt}. Scalar result: {Result}",
+                                attempt + 1,
+                                result);
+                        }
+                    }
+
+                    return result;
+                }
+            }
+            catch (SqliteException ex) when (IsTransientError(ex) && attempt < request.MaxRetries)
+            {
+                lastException = ex;
+                attempt++;
+
+                var delay = CalculateDelay(request, attempt);
+
+                if (logger.IsEnabled(LogLevel.Warning))
+                {
+                    logger.LogWarning(
+                    "Transient error on attempt {Attempt}: {ErrorCode} - {Message}. Retrying in {DelayMs}ms...",
+                    attempt,
+                    ex.SqliteErrorCode,
+                    ex.Message,
+                    delay.TotalMilliseconds);
+                }
+
+                await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        if (logger.IsEnabled(LogLevel.Error))
+        {
+            logger.LogError(
+            lastException,
+            "Query failed after {Attempts} attempts",
+            request.MaxRetries + 1);
+        }
+
+        throw new InvalidOperationException(
+            $"Failed to execute scalar query after {request.MaxRetries} retries.",
             lastException);
     }
 

@@ -63,6 +63,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\Roadbed.Common\Roadbed.Common.csproj" />
 		<ProjectReference Include="..\Roadbed.Crud\Roadbed.Crud.csproj" />
+		<ProjectReference Include="..\Roadbed.Data.Dapper\Roadbed.Data.Dapper.csproj" />
 		<ProjectReference Include="..\Roadbed.Data.Sqlite\Roadbed.Data.Sqlite.csproj" />
 		<ProjectReference Include="..\Roadbed.Data\Roadbed.Data.csproj" />
 		<ProjectReference Include="..\Roadbed.IO\Roadbed.IO.csproj" />

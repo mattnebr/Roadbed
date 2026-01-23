@@ -704,6 +704,314 @@ public class SqliteExecutorTests
 
     #endregion QuerySingleOrDefaultAsync Tests
 
+    #region ExecuteScalarAsync Tests
+
+    /// <summary>
+    /// Unit test to verify that ExecuteScalarAsync throws ArgumentNullException when request is null.
+    /// </summary>
+    /// <returns>Task that represents the asynchronous test operation.</returns>
+    [TestMethod]
+    public async Task ExecuteScalarAsync_NullRequest_ThrowsArgumentNullException()
+    {
+        // Arrange (Given)
+        DataExecutorRequest? nullRequest = null;
+        var connectionFactory = this.CreateConnectionFactory();
+        bool exceptionThrown = false;
+
+        // Act (When)
+        try
+        {
+            await SqliteExecutor.ExecuteScalarAsync<long>(nullRequest!, connectionFactory);
+        }
+        catch (ArgumentNullException)
+        {
+            exceptionThrown = true;
+        }
+
+        // Assert (Then)
+        Assert.IsTrue(
+            exceptionThrown,
+            "ExecuteScalarAsync should throw ArgumentNullException when request is null.");
+    }
+
+    /// <summary>
+    /// Unit test to verify that ExecuteScalarAsync throws ArgumentNullException when connectionFactory is null.
+    /// </summary>
+    /// <returns>Task that represents the asynchronous test operation.</returns>
+    [TestMethod]
+    public async Task ExecuteScalarAsync_NullConnectionFactory_ThrowsArgumentNullException()
+    {
+        // Arrange (Given)
+        var request = new DataExecutorRequest("SELECT 1");
+        IDataConnectionFactory? nullFactory = null;
+        bool exceptionThrown = false;
+
+        // Act (When)
+        try
+        {
+            await SqliteExecutor.ExecuteScalarAsync<long>(request, nullFactory!);
+        }
+        catch (ArgumentNullException)
+        {
+            exceptionThrown = true;
+        }
+
+        // Assert (Then)
+        Assert.IsTrue(
+            exceptionThrown,
+            "ExecuteScalarAsync should throw ArgumentNullException when connectionFactory is null.");
+    }
+
+    /// <summary>
+    /// Unit test to verify that ExecuteScalarAsync returns last inserted row ID.
+    /// </summary>
+    /// <returns>Task that represents the asynchronous test operation.</returns>
+    [TestMethod]
+    public async Task ExecuteScalarAsync_InsertWithLastInsertRowId_ReturnsNewId()
+    {
+        // Arrange (Given)
+        var connectionFactory = this.CreateConnectionFactory();
+
+        using var connection = (SqliteConnection)await connectionFactory.CreateOpenConnectionAsync(this.TestContext.CancellationToken);
+        using (var keepAlive = connection.KeepAlive())
+        {
+            // Create table
+            await SqliteExecutor.ExecuteAsync(
+                new DataExecutorRequest("CREATE TABLE TestTable (Id INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT)")
+                {
+                    RetriesEnabled = false,
+                },
+                connectionFactory);
+
+            var insertRequest = new DataExecutorRequest(
+                "INSERT INTO TestTable (Name) VALUES (@Name); SELECT last_insert_rowid();")
+            {
+                Parameters = new { Name = "Test1" },
+                RetriesEnabled = false,
+            };
+
+            // Act (When)
+            long newId = await SqliteExecutor.ExecuteScalarAsync<long>(insertRequest, connectionFactory);
+
+            // Assert (Then)
+            Assert.AreEqual(
+                1L,
+                newId,
+                "ExecuteScalarAsync should return the ID of the newly inserted row.");
+        }
+    }
+
+    /// <summary>
+    /// Unit test to verify that ExecuteScalarAsync returns count from aggregate query.
+    /// </summary>
+    /// <returns>Task that represents the asynchronous test operation.</returns>
+    [TestMethod]
+    public async Task ExecuteScalarAsync_CountQuery_ReturnsCount()
+    {
+        // Arrange (Given)
+        var connectionFactory = this.CreateConnectionFactory();
+
+        using var connection = (SqliteConnection)await connectionFactory.CreateOpenConnectionAsync(this.TestContext.CancellationToken);
+        using (var keepAlive = connection.KeepAlive())
+        {
+            // Create and populate table
+            await SqliteExecutor.ExecuteAsync(
+                new DataExecutorRequest("CREATE TABLE TestTable (Id INTEGER PRIMARY KEY, Name TEXT)")
+                {
+                    RetriesEnabled = false,
+                },
+                connectionFactory);
+
+            await SqliteExecutor.ExecuteAsync(
+                new DataExecutorRequest("INSERT INTO TestTable (Id, Name) VALUES (1, 'Test1'), (2, 'Test2'), (3, 'Test3')")
+                {
+                    RetriesEnabled = false,
+                },
+                connectionFactory);
+
+            var countRequest = new DataExecutorRequest("SELECT COUNT(*) FROM TestTable")
+            {
+                RetriesEnabled = false,
+            };
+
+            // Act (When)
+            long count = await SqliteExecutor.ExecuteScalarAsync<long>(countRequest, connectionFactory);
+
+            // Assert (Then)
+            Assert.AreEqual(
+                3L,
+                count,
+                "ExecuteScalarAsync should return the count of rows in the table.");
+        }
+    }
+
+    /// <summary>
+    /// Unit test to verify that ExecuteScalarAsync works with parameters.
+    /// </summary>
+    /// <returns>Task that represents the asynchronous test operation.</returns>
+    [TestMethod]
+    public async Task ExecuteScalarAsync_WithParameters_ReturnsScalarValue()
+    {
+        // Arrange (Given)
+        var connectionFactory = this.CreateConnectionFactory();
+
+        using var connection = (SqliteConnection)await connectionFactory.CreateOpenConnectionAsync(this.TestContext.CancellationToken);
+        using (var keepAlive = connection.KeepAlive())
+        {
+            // Create and populate table
+            await SqliteExecutor.ExecuteAsync(
+                new DataExecutorRequest("CREATE TABLE TestTable (Id INTEGER PRIMARY KEY, Name TEXT, Age INTEGER)")
+                {
+                    RetriesEnabled = false,
+                },
+                connectionFactory);
+
+            await SqliteExecutor.ExecuteAsync(
+                new DataExecutorRequest("INSERT INTO TestTable (Id, Name, Age) VALUES (1, 'Test1', 25), (2, 'Test2', 30)")
+                {
+                    RetriesEnabled = false,
+                },
+                connectionFactory);
+
+            var scalarRequest = new DataExecutorRequest("SELECT Age FROM TestTable WHERE Id = @Id")
+            {
+                Parameters = new { Id = 2 },
+                RetriesEnabled = false,
+            };
+
+            // Act (When)
+            int age = await SqliteExecutor.ExecuteScalarAsync<int>(scalarRequest, connectionFactory);
+
+            // Assert (Then)
+            Assert.AreEqual(
+                30,
+                age,
+                "ExecuteScalarAsync should return the scalar value from the specified row.");
+        }
+    }
+
+    /// <summary>
+    /// Unit test to verify that ExecuteScalarAsync works without logger.
+    /// </summary>
+    /// <returns>Task that represents the asynchronous test operation.</returns>
+    [TestMethod]
+    public async Task ExecuteScalarAsync_WithoutLogger_ExecutesSuccessfully()
+    {
+        // Arrange (Given)
+        var connectionFactory = this.CreateConnectionFactory();
+        var request = new DataExecutorRequest("SELECT 42")
+        {
+            RetriesEnabled = false,
+        };
+
+        // Act (When)
+        int result = await SqliteExecutor.ExecuteScalarAsync<int>(request, connectionFactory, logger: null);
+
+        // Assert (Then)
+        Assert.AreEqual(
+            42,
+            result,
+            "ExecuteScalarAsync should work without a logger.");
+    }
+
+    /// <summary>
+    /// Unit test to verify that ExecuteScalarAsync works with logger.
+    /// </summary>
+    /// <returns>Task that represents the asynchronous test operation.</returns>
+    [TestMethod]
+    public async Task ExecuteScalarAsync_WithLogger_ExecutesSuccessfully()
+    {
+        // Arrange (Given)
+        var connectionFactory = this.CreateConnectionFactory();
+        var logger = new TestLogger();
+        var request = new DataExecutorRequest("SELECT 42")
+        {
+            RetriesEnabled = false,
+        };
+
+        // Act (When)
+        int result = await SqliteExecutor.ExecuteScalarAsync<int>(request, connectionFactory, logger);
+
+        // Assert (Then)
+        Assert.AreEqual(
+            42,
+            result,
+            "ExecuteScalarAsync should work with a logger.");
+        Assert.IsNotEmpty(
+            logger.LoggedMessages,
+            "Logger should have captured log messages.");
+    }
+
+    /// <summary>
+    /// Unit test to verify that ExecuteScalarAsync with retries disabled executes only once.
+    /// </summary>
+    /// <returns>Task that represents the asynchronous test operation.</returns>
+    [TestMethod]
+    public async Task ExecuteScalarAsync_RetriesDisabled_ExecutesOnce()
+    {
+        // Arrange (Given)
+        var connectionFactory = this.CreateConnectionFactory();
+        var request = new DataExecutorRequest("SELECT 100")
+        {
+            RetriesEnabled = false,
+        };
+
+        // Act (When)
+        int result = await SqliteExecutor.ExecuteScalarAsync<int>(request, connectionFactory);
+
+        // Assert (Then)
+        Assert.AreEqual(
+            100,
+            result,
+            "Should execute successfully without retries.");
+    }
+
+    /// <summary>
+    /// Unit test to verify that ExecuteScalarAsync returns correct type for string result.
+    /// </summary>
+    /// <returns>Task that represents the asynchronous test operation.</returns>
+    [TestMethod]
+    public async Task ExecuteScalarAsync_StringResult_ReturnsCorrectType()
+    {
+        // Arrange (Given)
+        var connectionFactory = this.CreateConnectionFactory();
+
+        using var connection = (SqliteConnection)await connectionFactory.CreateOpenConnectionAsync(this.TestContext.CancellationToken);
+        using (var keepAlive = connection.KeepAlive())
+        {
+            // Create and populate table
+            await SqliteExecutor.ExecuteAsync(
+                new DataExecutorRequest("CREATE TABLE TestTable (Id INTEGER PRIMARY KEY, Name TEXT)")
+                {
+                    RetriesEnabled = false,
+                },
+                connectionFactory);
+
+            await SqliteExecutor.ExecuteAsync(
+                new DataExecutorRequest("INSERT INTO TestTable (Id, Name) VALUES (1, 'TestName')")
+                {
+                    RetriesEnabled = false,
+                },
+                connectionFactory);
+
+            var scalarRequest = new DataExecutorRequest("SELECT Name FROM TestTable WHERE Id = 1")
+            {
+                RetriesEnabled = false,
+            };
+
+            // Act (When)
+            string result = await SqliteExecutor.ExecuteScalarAsync<string>(scalarRequest, connectionFactory);
+
+            // Assert (Then)
+            Assert.AreEqual(
+                "TestName",
+                result,
+                "ExecuteScalarAsync should return string scalar value correctly.");
+        }
+    }
+
+    #endregion ExecuteScalarAsync Tests
+
     #region Retry Logic Tests
 
     /// <summary>
@@ -791,6 +1099,50 @@ public class SqliteExecutorTests
             1,
             result,
             "Command should succeed.");
+    }
+
+    /// <summary>
+    /// Unit test to verify that ExecuteScalarAsync retries on transient errors.
+    /// </summary>
+    /// <returns>Task that represents the asynchronous test operation.</returns>
+    [TestMethod]
+    public async Task ExecuteScalarAsync_TransientError_RetriesAndSucceeds()
+    {
+        // Arrange (Given)
+        long result = 0;
+        var connectionFactory = this.CreateConnectionFactory();
+        var logger = new TestLogger();
+
+        using var connection = (SqliteConnection)await connectionFactory.CreateOpenConnectionAsync(this.TestContext.CancellationToken);
+        using (var keepAlive = connection.KeepAlive())
+        {
+            // Create table
+            await SqliteExecutor.ExecuteAsync(
+                new DataExecutorRequest("CREATE TABLE TestTable (Id INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT)")
+                {
+                    RetriesEnabled = false,
+                },
+                connectionFactory);
+
+            var request = new DataExecutorRequest(
+                "INSERT INTO TestTable (Name) VALUES (@Name); SELECT last_insert_rowid();")
+            {
+                Parameters = new { Name = "Test" },
+                RetriesEnabled = true,
+                MaxRetries = 3,
+                DelayBetweenRetries = TimeSpan.FromMilliseconds(10),
+                DelayMultiplierEnabled = false,
+            };
+
+            // Act (When)
+            result = await SqliteExecutor.ExecuteScalarAsync<long>(request, connectionFactory, logger);
+        }
+
+        // Assert (Then)
+        Assert.AreEqual(
+            1L,
+            result,
+            "Scalar command should eventually succeed with retries.");
     }
 
     #endregion Retry Logic Tests

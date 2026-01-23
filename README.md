@@ -1,4 +1,11 @@
-# Roadbed
+<h1 align="center">
+  <img src="docs/assets/icon-intersection-100.png" alt="Roadbed" width="100" />
+  <br />
+  Roadbed
+  <br />
+
+</h1>
+<hr>
 
 A comprehensive framework for building resilient, data-driven C# applications with standardized patterns for data access, HTTP communication, messaging, and API integration.
 

@@ -19,7 +19,7 @@ using Quartz;
 /// via Context.Result, which will be captured by the metrics system.
 /// </remarks>
 public abstract class BaseSchedulingJob<T>
-    : BaseClassWithLogging<T>, ISchedulingJob
+    : BaseClassWithLoggingFactory<T>, ISchedulingJob
 {
     #region Private Fields
 

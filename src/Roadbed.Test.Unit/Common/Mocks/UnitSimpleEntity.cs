@@ -8,10 +8,10 @@ using Roadbed;
 /// </summary>
 /// <typeparam name="TCategoryName">Type inheriting from the Base.</typeparam>
 /// <remarks>
-/// This class is used to test the <see cref="BaseClassWithLogging{TCategoryName}"/> class.
+/// This class is used to test the <see cref="BaseClassWithLoggingFactory{TCategoryName}"/> class.
 /// </remarks>
 public class UnitSimpleEntity<TCategoryName> :
-    BaseClassWithLogging<TCategoryName>
+    BaseClassWithLoggingFactory<TCategoryName>
 {
     #region Protected Constructors
 

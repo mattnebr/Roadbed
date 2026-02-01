@@ -9,7 +9,7 @@ using Roadbed.Crud;
 /// Mock Data Transfer Object in the RESTful API.
 /// </summary>
 public record IntegrationObjectRow
-    : BaseDataTransferObject<string>
+    : BaseEntityRecord<string>
 {
     #region Public Constructors
 

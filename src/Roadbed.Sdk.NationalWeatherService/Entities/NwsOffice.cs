@@ -18,7 +18,7 @@ using Roadbed.Sdk.NationalWeatherService.Repositories;
 /// Weather Forecast Office from the National Weather Service.
 /// </summary>
 public sealed class NwsOffice
-    : BaseClassWithLogging<NwsOffice>
+    : BaseClassWithLoggingFactory<NwsOffice>
 {
     #region Public Constructors
 

@@ -12,7 +12,7 @@ using Roadbed.Net;
 /// Base repository for National Weather Service SDK.
 /// </summary>
 internal abstract class BaseNwsRepository
-    : BaseClassWithLogging<BaseNwsRepository>
+    : BaseClassWithLoggingFactory<BaseNwsRepository>
 {
     #region Public Fields
 

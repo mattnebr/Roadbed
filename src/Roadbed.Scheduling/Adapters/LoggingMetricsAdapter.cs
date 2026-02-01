@@ -19,7 +19,7 @@ using Microsoft.Extensions.Logging;
 /// Thread-safe as it delegates to ILogger which is thread-safe.
 /// </remarks>
 public sealed class LoggingMetricsAdapter
-    : BaseClassWithLogging<LoggingMetricsAdapter>, ISchedulingMetrics
+    : BaseClassWithLoggingFactory<LoggingMetricsAdapter>, ISchedulingMetrics
 {
     #region Public Constructors
 

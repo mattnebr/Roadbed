@@ -17,7 +17,7 @@ using Roadbed.Sdk.NationalWeatherService.Repositories;
 /// Weather Station from the National Weather Service.
 /// </summary>
 public sealed class NwsStation
-    : BaseClassWithLogging<NwsStation>
+    : BaseClassWithLoggingFactory<NwsStation>
 {
     #region Public Constructors
 

@@ -11,7 +11,7 @@ using Roadbed.Crud;
 /// This is the response from the /points/{latitude},{longitude} API endpoint.
 /// </remarks>
 internal sealed record NwsGridCoordinateResponse
-    : BaseDataTransferObject<string>
+    : BaseEntityRecord<string>
 {
     /// <summary>
     /// Gets or sets the GeoJSON type (should be "Feature").

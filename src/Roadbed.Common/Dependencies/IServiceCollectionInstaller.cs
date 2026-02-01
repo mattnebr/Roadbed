@@ -1,5 +1,5 @@
 ﻿/*
- * The namespace Roadbed.Common was removed on purpose and replaced with Roadbed so that no additional using statements are required.
+ * The namespace Roadbed.Common.Dependencies was removed on purpose and replaced with Roadbed so that no additional using statements are required.
  */
 
 namespace Roadbed;

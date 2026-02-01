@@ -4,21 +4,23 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Roadbed.Crud.Repositories.Async;
 using Roadbed.Net;
-using Roadbed.Crud;
 
 /// <summary>
 /// CRUD repository for IntegrationObject entity.
 /// </summary>
 /// <remarks>
 /// The 'live' mock API has a daily limit of requests.
-/// The current limit is equal to 100 requests per day. 
+/// The current limit is equal to 100 requests per day.
 /// </remarks>
 internal class IntegrationObjectRepository
-    : IBaseRepositoryWithCrudl<IntegrationObjectRow, string>
+    : BaseAsyncCrudlRepository<IntegrationObjectRow, string>
 {
+    #region Private Fields
+
     /// <summary>
     /// Base API path for the RESTful API.
     /// </summary>
@@ -32,107 +34,31 @@ internal class IntegrationObjectRepository
         NullValueHandling = NullValueHandling.Ignore
     };
 
-    /// <inheritdoc />
-    public async Task<IList<IntegrationObjectRow>> ListAsync(CancellationToken cancellationToken)
+    #endregion Private Fields
+
+    #region Internal Constructors
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="IntegrationObjectRepository"/> class.
+    /// </summary>
+    /// <param name="logger">Represents a type used to perform logging.</param>
+    internal IntegrationObjectRepository(ILogger<IntegrationObjectRepository> logger)
+        : base(logger)
     {
-        NetHttpRequest request = new NetHttpRequest
-        {
-            Method = HttpMethod.Get,
-            HttpEndPoint = new Uri(BaseApiPath),
-        };
-
-        // Make HTTP request
-        NetHttpResponse<string> response =
-            await NetHttpClient.MakeRequestAsync<string>(request, cancellationToken);
-
-        // Verify Response
-        if (response.IsSuccessStatusCode)
-        {
-            List<IntegrationObjectRow>? result =
-                JsonConvert.DeserializeObject<List<IntegrationObjectRow>>(response.Data);
-
-            if (result != null)
-            {
-                return result;
-            }
-        }
-
-        return default!;
     }
 
-    /// <inheritdoc />
-    public async Task<bool> DeleteAsync(string id, CancellationToken cancellationToken)
-    {
-        NetHttpRequest request = new NetHttpRequest
-        {
-            Method = HttpMethod.Delete,
-            HttpEndPoint = new Uri(string.Join("/", BaseApiPath, id)),
-        };
+    #endregion Internal Constructors
 
-        // Make HTTP request
-        NetHttpResponse<string> response =
-            await NetHttpClient.MakeRequestAsync<string>(request, cancellationToken);
-
-        // Verify Response
-        return response.IsSuccessStatusCode;
-    }
+    #region Public Methods
 
     /// <inheritdoc />
-    public async Task<IntegrationObjectRow> ReadAsync(string id, CancellationToken cancellationToken)
+    public override async Task<IntegrationObjectRow> CreateAsync(
+        IntegrationObjectRow entity,
+        CancellationToken cancellationToken = default)
     {
-        NetHttpRequest request = new NetHttpRequest
-        {
-            Method = HttpMethod.Get,
-            HttpEndPoint = new Uri(string.Join("/", BaseApiPath, id)),
-        };
-
-        // Make HTTP request
-        NetHttpResponse<string> response =
-            await NetHttpClient.MakeRequestAsync<string>(request, cancellationToken);
-
-        // Verify Response
-        if (response.IsSuccessStatusCode)
-        {
-            IntegrationObjectRow? result =
-                JsonConvert.DeserializeObject<IntegrationObjectRow>(response.Data);
-
-            if (result != null)
-            {
-                return result;
-            }
-        }
-
-        // If we reach here, something went wrong
-        return default!;
-    }
-
-    /// <inheritdoc />
-    public async Task<bool> UpdateAsync(IntegrationObjectRow dto, CancellationToken cancellationToken)
-    {
-        string jsonPayload = JsonConvert.SerializeObject(dto, newtonsoftSerializationSettings);
-
-        NetHttpRequest request = new NetHttpRequest
-        {
-            Method = HttpMethod.Put,
-            HttpEndPoint = new Uri(string.Join("/", BaseApiPath, dto.Id)),
-            Content = new StringContent(
-                jsonPayload,
-                Encoding.UTF8,
-                "application/json"),
-        };
-
-        // Make HTTP request
-        NetHttpResponse<string> response =
-            await NetHttpClient.MakeRequestAsync<string>(request, cancellationToken);
-
-        // Verify Response
-        return response.IsSuccessStatusCode;
-    }
-
-    /// <inheritdoc />
-    public async Task<string> CreateAsync(IntegrationObjectRow dto, CancellationToken cancellationToken)
-    {
-        string jsonPayload = JsonConvert.SerializeObject(dto, newtonsoftSerializationSettings);
+        string jsonPayload = JsonConvert.SerializeObject(
+            entity,
+            newtonsoftSerializationSettings);
 
         NetHttpRequest request = new NetHttpRequest
         {
@@ -151,15 +77,117 @@ internal class IntegrationObjectRepository
         // Verify Response
         if (response.IsSuccessStatusCode)
         {
-            JObject responseData = JObject.Parse(response.Data);
+            IntegrationObjectRow? result =
+                JsonConvert.DeserializeObject<IntegrationObjectRow>(response.Data);
 
-            string? id = responseData.Value<string>("id");
+            return result!;
+        }
 
-            return id!;
-        }
-        else
-        {
-            return string.Empty;
-        }
+        return default!;
     }
+
+    /// <inheritdoc />
+    public override async Task<IntegrationObjectRow?> ReadAsync(
+        string id,
+        CancellationToken cancellationToken = default)
+    {
+        NetHttpRequest request = new NetHttpRequest
+        {
+            Method = HttpMethod.Get,
+            HttpEndPoint = new Uri(string.Join("/", BaseApiPath, id)),
+        };
+
+        // Make HTTP request
+        NetHttpResponse<string> response =
+            await NetHttpClient.MakeRequestAsync<string>(request, cancellationToken);
+
+        // Verify Response
+        if (response.IsSuccessStatusCode)
+        {
+            IntegrationObjectRow? result =
+                JsonConvert.DeserializeObject<IntegrationObjectRow>(response.Data);
+
+            return result;
+        }
+
+        return default;
+    }
+
+    /// <inheritdoc />
+    public override async Task<IntegrationObjectRow> UpdateAsync(
+        IntegrationObjectRow entity,
+        CancellationToken cancellationToken = default)
+    {
+        string jsonPayload = JsonConvert.SerializeObject(
+            entity,
+            newtonsoftSerializationSettings);
+
+        NetHttpRequest request = new NetHttpRequest
+        {
+            Method = HttpMethod.Put,
+            HttpEndPoint = new Uri(string.Join("/", BaseApiPath, entity.Id)),
+            Content = new StringContent(
+                jsonPayload,
+                Encoding.UTF8,
+                "application/json"),
+        };
+
+        // Make HTTP request
+        NetHttpResponse<string> response =
+            await NetHttpClient.MakeRequestAsync<string>(request, cancellationToken);
+
+        // Verify Response
+        if (response.IsSuccessStatusCode)
+        {
+            IntegrationObjectRow? result =
+                JsonConvert.DeserializeObject<IntegrationObjectRow>(response.Data);
+
+            return result!;
+        }
+
+        return default!;
+    }
+
+    /// <inheritdoc />
+    public override async Task DeleteAsync(
+        string id,
+        CancellationToken cancellationToken = default)
+    {
+        NetHttpRequest request = new NetHttpRequest
+        {
+            Method = HttpMethod.Delete,
+            HttpEndPoint = new Uri(string.Join("/", BaseApiPath, id)),
+        };
+
+        // Make HTTP request
+        await NetHttpClient.MakeRequestAsync<string>(request, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<IList<IntegrationObjectRow>> ListAsync(
+        CancellationToken cancellationToken = default)
+    {
+        NetHttpRequest request = new NetHttpRequest
+        {
+            Method = HttpMethod.Get,
+            HttpEndPoint = new Uri(BaseApiPath),
+        };
+
+        // Make HTTP request
+        NetHttpResponse<string> response =
+            await NetHttpClient.MakeRequestAsync<string>(request, cancellationToken);
+
+        // Verify Response
+        if (response.IsSuccessStatusCode)
+        {
+            IList<IntegrationObjectRow>? result =
+                JsonConvert.DeserializeObject<List<IntegrationObjectRow>>(response.Data);
+
+            return result!;
+        }
+
+        return default!;
+    }
+
+    #endregion Public Methods
 }

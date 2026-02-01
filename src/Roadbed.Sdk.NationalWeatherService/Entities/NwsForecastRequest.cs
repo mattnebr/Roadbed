@@ -21,7 +21,7 @@ using Roadbed.Sdk.NationalWeatherService.Repositories;
 /// to NWS grid coordinates (office ID, gridX, gridY) required for forecast requests.
 /// </remarks>
 public sealed class NwsForecastRequest
-    : BaseClassWithLogging<NwsForecastRequest>
+    : BaseClassWithLoggingFactory<NwsForecastRequest>
 {
     #region Public Constructors
 

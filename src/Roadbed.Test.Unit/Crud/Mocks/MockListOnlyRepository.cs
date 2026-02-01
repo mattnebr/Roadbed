@@ -1,13 +1,13 @@
 ﻿namespace Roadbed.Test.Unit.Crud.Mocks;
 
 using System.Collections.Generic;
-using Roadbed.Crud;
+using Roadbed.Crud.Repositories.Async;
 
 /// <summary>
 /// Mock repository for testing.
 /// </summary>
 public class MockListOnlyRepository
-    : IBaseRepositoryWithListOnly<MockDto, int>
+    : IAsyncListOnlyRepository<MockDto, int>
 {
     #region Public Properties
 

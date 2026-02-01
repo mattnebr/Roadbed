@@ -1,273 +1,239 @@
 # Roadbed.Crud
 
-Base classes and interfaces for implementing the Repository and Entity patterns with CRUD operations (Create, Read, Update, Delete, List).
+Base classes and interfaces for implementing the Repository and Service patterns with CRUDAL operations (Create, Read, Update, Delete, Archive, List).
 
 ## Overview
 
-This library provides a structured approach to data access using the Repository pattern with Entity wrappers. It includes interfaces for repositories, base classes for entities, and DTOs with built-in error tracking.
+Roadbed.Crud provides a structured, compiler-enforced approach to data access. It separates **repositories** (thin data access) from **services** (business logic, validation, orchestration) and gives you the exact combination of operations each entity needs — nothing more, nothing less.
+
+For the full type catalog, interface signatures, and design rationale, see the [Architecture Document](/docs/architectural-design/architecture-roadbed-crud.md).
 
 ## Installation
+
 ```bash
 dotnet add package Roadbed.Crud
 ```
 
 ## Architecture
+
 ```
-┌─────────────┐
-│   Entity    │  ← Business logic layer (your app)
-└──────┬──────┘
-       │ uses
-┌──────▼──────┐
-│ Repository  │  ← Data access layer
-└──────┬──────┘
-       │ returns
-┌──────▼──────┐
-│     DTO     │  ← Data transfer objects
-└─────────────┘
+┌─────────────────────────────────────────────────┐
+│ Application Layer                               │
+│   Depends on: IFooService (public)              │
+└────────────────────┬────────────────────────────┘
+                     │
+┌────────────────────▼────────────────────────────┐
+│ Class Library                                   │
+│                                                 │
+│   public  IFooService      → business logic     │
+│   public FooService        → validation, rules  │
+│   internal IFooRepository  → data access        │
+│   internal FooRepository   → SQL, API calls     │
+└─────────────────────────────────────────────────┘
 ```
 
-## Key Components
+The application layer only sees the **service interface**. The repository is internal to the class library.
 
-### DTOs (Data Transfer Objects)
+## Composites
 
-#### IDataTransferObject\<TId\>
+Pick the composite that matches your entity's needs:
+
+|Composite|Operations|Use When|
+|---|---|---|
+|**ListOnly**|List|Lookup tables, reference data|
+|**Crud**|Create, Read, Update, Delete|Large tables with custom queries|
+|**Crudl**|Crud + List|Small-to-medium tables|
+|**Cruda**|Crud + Archive|Entities with soft delete|
+|**Crudal**|Crud + Archive + List|Full operation set|
+
+Each composite is available in **Async** and **Sync** variants, and at both the **Repository** and **Service** layers. Services also include **Exists** and **Upsert**, composed automatically from repository primitives.
+
+## Quick Start
+
+### 1. Define Your Entity
+
 ```csharp
-public interface IDataTransferObject<TIdDataType>
-{
-    TIdDataType? Id { get; }
-    List<string>? Errors { get; }
-}
-```
+namespace Roadbed.Sdk.Customers;
 
-#### BaseDataTransferObject\<TId\>
-
-Base implementation with built-in `[Column("id")]` and `[JsonProperty("id")]` attributes:
-```csharp
-public class FooDto : BaseDataTransferObject<long>
-{
-    public string? Name { get; set; }
-    public string? Description { get; set; }
-}
-
-// Usage
-var dto = new FooDto 
-{ 
-    Id = 1, 
-    Name = "Test",
-    Errors = new List<string>()
-};
-```
-
-### Repository Interfaces
-
-Three levels of repository contracts:
-
-#### IBaseRepositoryWithListOnly<TDto, TId>
-
-Read-only access with list operation:
-```csharp
-public interface IBaseRepositoryWithListOnly<TDto, TId>
-{
-    Task<IList<TDto>> ListAsync(CancellationToken cancellationToken = default);
-}
-```
-
-#### IBaseRepositoryWithCrud<TDto, TId>
-
-Full CRUD operations (no List):
-```csharp
-public interface IBaseRepositoryWithCrud<TDto, TId>
-{
-    Task<TId> CreateAsync(TDto dto, CancellationToken cancellationToken = default);
-    Task<TDto> ReadAsync(TId id, CancellationToken cancellationToken = default);
-    Task<bool> UpdateAsync(TDto dto, CancellationToken cancellationToken = default);
-    Task<bool> DeleteAsync(TId id, CancellationToken cancellationToken = default);
-}
-```
-
-#### IBaseRepositoryWithCrudl<TDto, TId>
-
-Complete CRUDL operations (extends both interfaces above):
-```csharp
-public interface IBaseRepositoryWithCrudl<TDto, TId>
-    : IBaseRepositoryWithCrud<TDto, TId>, IBaseRepositoryWithListOnly<TDto, TId>
-{
-}
-```
-
-### Entity Base Classes
-
-Entities wrap repositories and add business logic with automatic logging.
-
-#### BaseEntityWithListOnly<TEntity, TDto, TId>
-```csharp
-public class FooEntity : BaseEntityWithListOnly<FooEntity, FooDto, long>
-{
-    public FooEntity(
-        IBaseRepositoryWithListOnly<FooDto, long> repository,
-        ILoggerFactory factory)
-        : base(repository, factory)
-    {
-    }
-    
-    // ListAsync
-}
-```
-
-#### BaseEntityWithCrud<TEntity, TDto, TId>
-```csharp
-public class FooEntity : BaseEntityWithCrud<FooEntity, FooDto, long>
-{
-    public FooEntity(
-        IBaseRepositoryWithCrud<FooDto, long> repository,
-        ILoggerFactory factory)
-        : base(repository, factory)
-    {
-    }
-    
-    // Inherits: CreateAsync, ReadAsync, UpdateAsync, DeleteAsync
-}
-```
-
-#### BaseEntityWithCrudl<TEntity, TDto, TId>
-```csharp
-public class FooEntity : BaseEntityWithCrudl<FooEntity, FooDto, long>
-{
-    public FooEntity(
-        IBaseRepositoryWithCrudl<FooDto, long> repository,
-        ILoggerFactory factory)
-        : base(repository, factory)
-    {
-    }
-    
-    // Inherits: CreateAsync, ReadAsync, UpdateAsync, DeleteAsync, ListAsync
-}
-```
-
-## Complete Example
-
-### 1. Define Your DTO
-```csharp
+using Newtonsoft.Json;
 using Roadbed.Crud;
 
-public class FooDto : BaseDataTransferObject<long>
+public sealed record Customer : BaseEntityRecord<string>
 {
-    public string? Name { get; set; }
-    public string? Description { get; set; }
-    public DateTime CreatedAt { get; set; }
+    [JsonProperty("id")]
+    public override string? Id { get; set; }
+
+    [JsonProperty("name")]
+    required public string Name { get; set; }
+
+    [JsonProperty("email")]
+    required public string Email { get; set; }
 }
 ```
 
-### 2. Define Repository Interface
+### 2. Define the Repository Interface (internal)
+
 ```csharp
-public interface IFooRepository : IBaseRepositoryWithCrudl<FooDto, long>
+namespace Roadbed.Sdk.Customers;
+
+using Roadbed.Crud.Repositories.Async;
+
+internal interface ICustomerRepository
+    : IAsyncCrudlRepository<Customer, string>
 {
-    // Add custom methods beyond CRUDL here
 }
 ```
 
-### 3. Implement Repository
+### 3. Implement the Repository
+
 ```csharp
-public class FooRepository : IFooRepository
+namespace Roadbed.Sdk.Customers;
+
+using Microsoft.Extensions.Logging;
+using Roadbed.Crud.Repositories.Async;
+
+internal sealed class CustomerRepository
+    : BaseAsyncCrudlRepository<Customer, string>,
+      ICustomerRepository
 {
-    private readonly IDataConnectionFactory _connectionFactory;
-    private readonly ILogger<FooRepository> _logger;
-
-    public FooRepository(
-        IDataConnectionFactory connectionFactory,
-        ILogger<FooRepository> logger)
+    public CustomerRepository(ILogger<CustomerRepository> logger)
+        : base(logger)
     {
-        _connectionFactory = connectionFactory;
-        _logger = logger;
     }
 
-    public async Task<long> CreateAsync(
-        FooDto dto,
+    public override async Task<Customer> CreateAsync(
+        Customer entity,
         CancellationToken cancellationToken = default)
     {
-        // Implementation
+        ArgumentNullException.ThrowIfNull(entity);
+        // Data access logic here
+        throw new NotImplementedException();
     }
 
-    public async Task<FooDto> ReadAsync(
-        long id,
+    public override async Task<Customer?> ReadAsync(
+        string id,
         CancellationToken cancellationToken = default)
     {
-        // Implementation
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        // Return null when not found
+        throw new NotImplementedException();
     }
 
-    public async Task<bool> UpdateAsync(
-        FooDto dto,
+    public override async Task<Customer> UpdateAsync(
+        Customer entity,
         CancellationToken cancellationToken = default)
     {
-        // Implementation
+        ArgumentNullException.ThrowIfNull(entity);
+        throw new NotImplementedException();
     }
 
-    public async Task<bool> DeleteAsync(
-        long id,
+    public override async Task DeleteAsync(
+        string id,
         CancellationToken cancellationToken = default)
     {
-        // Implementation
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        throw new NotImplementedException();
     }
 
-    public async Task<IList<FooDto>> ListAsync(
+    public override async Task<IList<Customer>> ListAsync(
         CancellationToken cancellationToken = default)
     {
-        // Implementation
+        throw new NotImplementedException();
     }
 }
 ```
 
-### 4. Create Entity with Business Logic
+The base class is **abstract** — the compiler tells you exactly which methods to implement.
+
+### 4. Define the Service Interface (public)
+
 ```csharp
-using Roadbed.Crud;
+namespace Roadbed.Sdk.Customers;
 
-public class FooEntity : BaseEntityWithCrudl<FooEntity, FooDto, long>
+using Roadbed.Crud.Services.Async;
+
+public interface ICustomerService
+    : IAsyncCrudlService<Customer, string>
 {
-    public FooEntity(
-        IFooRepository repository,
-        ILoggerFactory factory)
-        : base(repository, factory)
-    {
-    }
-
-    // Add business logic methods
-    public async Task<FooDto?> GetActiveByNameAsync(
-        string name,
-        CancellationToken cancellationToken = default)
-    {
-        this.LogDebug($"Getting active foo by name: {name}");
-        
-        var allItems = await this.ListAsync(cancellationToken);
-        return allItems.FirstOrDefault(x => x.Name == name);
-    }
-
-    public async Task<long> CreateWithValidationAsync(
-        FooDto dto,
-        CancellationToken cancellationToken = default)
-    {
-        // Business validation
-        if (string.IsNullOrWhiteSpace(dto.Name))
-        {
-            dto.Errors ??= new List<string>();
-            dto.Errors.Add("Name is required");
-            return 0;
-        }
-
-        // Call base CRUD operation
-        return await this.CreateAsync(dto, cancellationToken) ?? 0;
-    }
 }
 ```
+
+### 5. Implement the Service
+
+```csharp
+namespace Roadbed.Sdk.Customers;
+
+using Microsoft.Extensions.Logging;
+using Roadbed.Crud.Repositories.Async;
+using Roadbed.Crud.Services.Async;
+
+internal sealed class CustomerService
+    : BaseAsyncCrudlService<Customer, string>,
+      ICustomerService
+{
+    public CustomerService(
+        IAsyncCrudlRepository<Customer, string> repository,
+        ILogger<CustomerService> logger)
+        : base(repository, logger)
+    {
+    }
+
+    // All 7 methods work with zero overrides:
+    //   CreateAsync, ReadAsync, UpdateAsync, DeleteAsync, ListAsync
+    //   + ExistsAsync and UpsertAsync (composed automatically)
+    //
+    // Override to add business logic:
+    //
+    // public override async Task<Customer> CreateAsync(
+    //     Customer entity,
+    //     CancellationToken cancellationToken = default)
+    // {
+    //     ArgumentNullException.ThrowIfNull(entity);
+    //     ArgumentException.ThrowIfNullOrWhiteSpace(entity.Email);
+    //     this.LogInformation("Creating customer: {Name}", entity.Name);
+    //     return await base.CreateAsync(entity, cancellationToken);
+    // }
+}
+```
+
+The base class is **virtual** — everything works out of the box. Override only when you need validation, caching, or other business logic.
+
+### 6. Register in DI
+
+```csharp
+services.AddSingleton<ICustomerRepository, CustomerRepository>();
+services.AddSingleton<ICustomerService, CustomerService>();
+```
+
+## Key Concepts
+
+**Repositories are abstract.** You must implement every data access method. The compiler enforces this.
+
+**Services are virtual.** All operations delegate to the repository by default. Override only when adding business logic.
+
+**Exists and Upsert are composed.** `ExistsAsync` calls `ReadAsync` and checks for null. `UpsertAsync` calls `ExistsAsync` to decide between Create and Update. Override when your data source supports native upsert.
+
+**Read returns null for not-found.** Never throw when an entity doesn't exist. This enables the composed `ExistsAsync` to work without exception-driven control flow.
+
+**Delete returns void.** Throw on failure instead of returning a boolean.
+
+## Entity Base Types
+
+|Type|Use When|
+|---|---|
+|`BaseEntityRecord<TId>`|DTOs, API responses, immutable data|
+|`BaseEntityClass<TId>`|Domain entities with behavior, ORM compatibility|
 
 ## Requirements
 
 - .NET 10.0+
 - Microsoft.Extensions.Logging
 - Newtonsoft.Json
-- Roadbed (base library)
+- Roadbed.Common (BaseClassWithLogging)
 
 ## Related Packages
 
-- **Roadbed.Data** - Core data access abstractions
-- **Roadbed.Data.Sqlite** - SQLite implementations
-- **Roadbed.Data.Dapper** - Dapper configuration
+- **Roadbed.Common** — BaseClassWithLogging base class
+- **Roadbed.Data** — Core data access abstractions
+- **Roadbed.Data.Sqlite** — SQLite implementations
+- **Roadbed.Data.Dapper** — Dapper configuration

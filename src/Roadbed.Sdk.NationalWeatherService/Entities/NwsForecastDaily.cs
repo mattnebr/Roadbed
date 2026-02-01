@@ -18,7 +18,7 @@ using Roadbed.Sdk.NationalWeatherService.Repositories;
 /// Initializes a new instance of the <see cref="NwsForecastDaily"/> class.
 /// </remarks>
 public sealed class NwsForecastDaily
-    : BaseClassWithLogging<NwsForecastDaily>
+    : BaseClassWithLoggingFactory<NwsForecastDaily>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="NwsForecastDaily"/> class.

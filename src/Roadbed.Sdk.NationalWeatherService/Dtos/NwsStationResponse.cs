@@ -11,7 +11,7 @@ using Roadbed.Crud;
 /// National Weather Service API. This is a GeoJSON Feature.
 /// </remarks>
 internal sealed record NwsStationResponse
-    : BaseDataTransferObject<string>
+    : BaseEntityRecord<string>
 {
     /// <summary>
     /// Gets or sets the JSON-LD context.

@@ -1,13 +1,12 @@
 ﻿namespace Roadbed.Test.Unit.Crud.Mocks;
 
-using System.Collections.Generic;
-using Roadbed.Crud;
+using Roadbed.Crud.Repositories.Async;
 
 /// <summary>
 /// Mock repository for testing.
 /// </summary>
 public class MockCrudlRepository
-    : IBaseRepositoryWithCrudl<MockDto, int>
+    : IAsyncCrudlRepository<MockDto, int>
 {
     #region Public Properties
 
@@ -46,73 +45,69 @@ public class MockCrudlRepository
     #region Public Methods
 
     /// <inheritdoc />
-    public async Task<int> CreateAsync(MockDto dto, CancellationToken cancellationToken = default)
+    public Task<MockDto> CreateAsync(
+        MockDto entity,
+        CancellationToken cancellationToken = default)
     {
         this.CreateCalled = true;
         this.LastCancellationToken = cancellationToken;
-
-        return await Task.FromResult(dto.Id);
+        return Task.FromResult(entity);
     }
 
     /// <inheritdoc />
-    public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
-    {
-        this.DeleteCalled = true;
-        this.LastCancellationToken = cancellationToken;
-
-        bool validID = false;
-
-        if (id > 0)
-        {
-            validID = true;
-        }
-
-        return await Task.FromResult(validID);
-    }
-
-    /// <inheritdoc />
-    public async Task<IList<MockDto>> ListAsync(CancellationToken cancellationToken = default)
-    {
-        this.ListCalled = true;
-        this.LastCancellationToken = cancellationToken;
-
-        IList<MockDto> list = new List<MockDto>()
-            {
-                new MockDto { Id = 1, Name = "Test" },
-            };
-
-        return list;
-    }
-
-    /// <inheritdoc />
-    public async Task<MockDto> ReadAsync(int id, CancellationToken cancellationToken = default)
+    public Task<MockDto?> ReadAsync(
+        int id,
+        CancellationToken cancellationToken = default)
     {
         this.ReadCalled = true;
         this.LastCancellationToken = cancellationToken;
 
-        MockDto mock = new MockDto()
-        {
-            Id = id,
-            Name = "Test",
-        };
+        MockDto? mock = id > 0
+            ? new MockDto { Id = id, Name = "Test" }
+            : null;
 
-        return mock;
+        return Task.FromResult(mock);
     }
 
     /// <inheritdoc />
-    public async Task<bool> UpdateAsync(MockDto dto, CancellationToken cancellationToken = default)
+    public Task<MockDto> UpdateAsync(
+        MockDto entity,
+        CancellationToken cancellationToken = default)
     {
         this.UpdateCalled = true;
         this.LastCancellationToken = cancellationToken;
+        return Task.FromResult(entity);
+    }
 
-        bool validID = false;
+    /// <inheritdoc />
+    public Task DeleteAsync(
+        int id,
+        CancellationToken cancellationToken = default)
+    {
+        this.DeleteCalled = true;
+        this.LastCancellationToken = cancellationToken;
 
-        if (dto.Id > 0)
+        if (id <= 0)
         {
-            validID = true;
+            throw new InvalidOperationException("Entity not found.");
         }
 
-        return await Task.FromResult(validID);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task<IList<MockDto>> ListAsync(
+        CancellationToken cancellationToken = default)
+    {
+        this.ListCalled = true;
+        this.LastCancellationToken = cancellationToken;
+
+        IList<MockDto> list = new List<MockDto>
+        {
+            new MockDto { Id = 1, Name = "Test" },
+        };
+
+        return Task.FromResult(list);
     }
 
     #endregion Public Methods

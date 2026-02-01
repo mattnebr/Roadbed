@@ -1,10 +1,12 @@
 ﻿namespace Roadbed.Test.Unit.Crud;
 
-using Roadbed.Crud;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Roadbed.Crud.Repositories.Async;
 using Roadbed.Test.Unit.Crud.Mocks;
 
 /// <summary>
-/// Contains unit tests for verifying the behavior of the BaseEntityWithCrud class.
+/// Contains unit tests for verifying the behavior of the
+/// <see cref="Roadbed.Crud.Services.Async.BaseAsyncCrudService{TEntity, TId}"/> class.
 /// </summary>
 [TestClass]
 public class BaseEntityWithCrudTests
@@ -12,334 +14,435 @@ public class BaseEntityWithCrudTests
     #region Public Methods
 
     /// <summary>
-    /// Verifies that constructor with ILogger initializes successfully.
+    /// Unit test to verify that constructor with ILogger initializes successfully.
     /// </summary>
     [TestMethod]
     public void Constructor_WithLogger_InitializesSuccessfully()
     {
-        // Arrange
+        // Arrange (Given)
         var repository = new MockCrudRepository();
         var logger = new MockLogger();
 
-        // Act
+        // Act (When)
         var entity = new MockCrudEntity(repository, logger);
 
-        // Assert
-        Assert.IsNotNull(entity, "Entity should be initialized.");
-        Assert.IsNotNull(entity.Repository, "Repository should be set.");
+        // Assert (Then)
+        Assert.IsNotNull(
+            entity,
+            "Entity should be initialized when valid repository and logger are provided.");
     }
 
     /// <summary>
-    /// Verifies that constructor with ILogger throws when repository is null.
+    /// Unit test to verify that constructor throws ArgumentNullException when
+    /// repository is null.
     /// </summary>
     [TestMethod]
-    public void Constructor_WithLoggerAndNullRepository_ThrowsArgumentNullException()
+    public void Constructor_NullRepository_ThrowsArgumentNullException()
     {
-        // Arrange
-        IBaseRepositoryWithCrud<MockDto, int>? nullRepository = null;
+        // Arrange (Given)
+        IAsyncCrudRepository<MockDto, int>? nullRepository = null;
         var logger = new MockLogger();
+        bool exceptionThrown = false;
 
-        // Act
-        bool threwException = false;
+        // Act (When)
         try
         {
             var entity = new MockCrudEntity(nullRepository!, logger);
         }
         catch (ArgumentNullException)
         {
-            threwException = true;
+            exceptionThrown = true;
         }
 
-        // Assert
-        Assert.IsTrue(threwException, "Should throw ArgumentNullException when repository is null.");
+        // Assert (Then)
+        Assert.IsTrue(
+            exceptionThrown,
+            "Constructor should throw ArgumentNullException when repository is null.");
     }
 
     /// <summary>
-    /// Verifies that constructor with ILoggerFactory initializes successfully.
+    /// Unit test to verify that CreateAsync returns the created entity.
     /// </summary>
+    /// <returns>A task representing the asynchronous unit test operation.</returns>
     [TestMethod]
-    public void Constructor_WithLoggerFactory_InitializesSuccessfully()
+    public async Task CreateAsync_ValidEntity_ReturnsCreatedEntity()
     {
-        // Arrange
+        // Arrange (Given)
         var repository = new MockCrudRepository();
-        var loggerFactory = new MockLoggerFactory();
+        var logger = new MockLogger();
+        var entity = new MockCrudEntity(repository, logger);
+        var dto = new MockDto { Id = 100, Name = "Test" };
 
-        // Act
-        var entity = new MockCrudEntity(repository, loggerFactory);
+        // Act (When)
+        var result = await entity.CreateAsync(dto);
 
-        // Assert
-        Assert.IsNotNull(entity, "Entity should be initialized.");
-        Assert.IsNotNull(entity.Repository, "Repository should be set.");
+        // Assert (Then)
+        Assert.IsNotNull(
+            result,
+            "CreateAsync should return the created entity.");
+        Assert.AreEqual(
+            100,
+            result.Id,
+            "Created entity should have the expected Id.");
+        Assert.IsTrue(
+            repository.CreateCalled,
+            "Repository CreateAsync should be called.");
     }
 
     /// <summary>
-    /// Verifies that constructor with ILoggerFactory throws when repository is null.
-    /// </summary>
-    [TestMethod]
-    public void Constructor_WithLoggerFactoryAndNullRepository_ThrowsArgumentNullException()
-    {
-        // Arrange
-        IBaseRepositoryWithCrud<MockDto, int>? nullRepository = null;
-        var loggerFactory = new MockLoggerFactory();
-
-        // Act
-        bool threwException = false;
-        try
-        {
-            var entity = new MockCrudEntity(nullRepository!, loggerFactory);
-        }
-        catch (ArgumentNullException)
-        {
-            threwException = true;
-        }
-
-        // Assert
-        Assert.IsTrue(threwException, "Should throw ArgumentNullException when repository is null.");
-    }
-
-    /// <summary>
-    /// Verifies that CreateAsync uses cancellation token correctly.
+    /// Unit test to verify that CreateAsync passes the CancellationToken to
+    /// the repository.
     /// </summary>
     /// <returns>A task representing the asynchronous unit test operation.</returns>
     [TestMethod]
     public async Task CreateAsync_WithCancellationToken_PassesTokenToRepository()
     {
-        // Arrange
+        // Arrange (Given)
         var repository = new MockCrudRepository();
         var logger = new MockLogger();
         var entity = new MockCrudEntity(repository, logger);
         var dto = new MockDto { Id = 100, Name = "Test" };
         var cts = new CancellationTokenSource();
 
-        // Act
+        // Act (When)
         await entity.CreateAsync(dto, cts.Token);
 
-        // Assert
-        Assert.AreEqual(cts.Token, repository.LastCancellationToken, "CancellationToken should be passed to repository.");
+        // Assert (Then)
+        Assert.AreEqual(
+            cts.Token,
+            repository.LastCancellationToken,
+            "CancellationToken should be passed through to the repository.");
     }
 
     /// <summary>
-    /// Verifies that CreateAsync creates a DTO successfully with valid data.
+    /// Unit test to verify that ReadAsync returns an entity for a valid ID.
     /// </summary>
     /// <returns>A task representing the asynchronous unit test operation.</returns>
     [TestMethod]
-    public async Task CreateAsync_WithValidDto_CreatesSuccessfully()
+    public async Task ReadAsync_ValidId_ReturnsEntity()
     {
-        // Arrange
-        var repository = new MockCrudRepository();
-        var logger = new MockLogger();
-        var entity = new MockCrudEntity(repository, logger);
-        var dto = new MockDto { Id = 100, Name = "Test" };
-
-        // Act
-        var result = await entity.CreateAsync(dto);
-
-        // Assert
-        Assert.AreEqual(100, result, "CreateAsync should return the created ID.");
-        Assert.IsTrue(repository.CreateCalled, "Repository CreateAsync should be called.");
-    }
-
-    /// <summary>
-    /// Verifies that DeleteAsync uses cancellation token correctly.
-    /// </summary>
-    /// <returns>A task representing the asynchronous unit test operation.</returns>
-    [TestMethod]
-    public async Task DeleteAsync_WithCancellationToken_PassesTokenToRepository()
-    {
-        // Arrange
-        var repository = new MockCrudRepository();
-        var logger = new MockLogger();
-        var entity = new MockCrudEntity(repository, logger);
-        int id = 100;
-        var cts = new CancellationTokenSource();
-
-        // Act
-        await entity.DeleteAsync(id, cts.Token);
-
-        // Assert
-        Assert.AreEqual(cts.Token, repository.LastCancellationToken, "CancellationToken should be passed to repository.");
-    }
-
-    /// <summary>
-    /// Verifies that DeleteAsync returns early when ID is default.
-    /// </summary>
-    /// <returns>A task representing the asynchronous unit test operation.</returns>
-    [TestMethod]
-    public async Task DeleteAsync_WithDefaultId_ReturnsEarly()
-    {
-        // Arrange
-        var repository = new MockCrudRepository();
-        var logger = new MockLogger();
-        var entity = new MockCrudEntity(repository, logger);
-        int defaultId = default(int);
-
-        // Act
-        await entity.DeleteAsync(defaultId);
-
-        // Assert
-        Assert.IsFalse(repository.DeleteCalled, "Repository DeleteAsync should not be called when ID is default.");
-    }
-
-    /// <summary>
-    /// Verifies that DeleteAsync deletes successfully with valid ID.
-    /// </summary>
-    /// <returns>A task representing the asynchronous unit test operation.</returns>
-    [TestMethod]
-    public async Task DeleteAsync_WithValidId_DeletesSuccessfully()
-    {
-        // Arrange
+        // Arrange (Given)
         var repository = new MockCrudRepository();
         var logger = new MockLogger();
         var entity = new MockCrudEntity(repository, logger);
         int id = 100;
 
-        // Act
-        await entity.DeleteAsync(id);
+        // Act (When)
+        var result = await entity.ReadAsync(id);
 
-        // Assert
-        Assert.IsTrue(repository.DeleteCalled, "Repository DeleteAsync should be called.");
+        // Assert (Then)
+        Assert.IsNotNull(
+            result,
+            "ReadAsync should return an entity for a valid ID.");
+        Assert.IsTrue(
+            repository.ReadCalled,
+            "Repository ReadAsync should be called.");
     }
 
     /// <summary>
-    /// Verifies that ReadAsync uses cancellation token correctly.
+    /// Unit test to verify that ReadAsync returns null for an invalid ID.
+    /// </summary>
+    /// <returns>A task representing the asynchronous unit test operation.</returns>
+    [TestMethod]
+    public async Task ReadAsync_InvalidId_ReturnsNull()
+    {
+        // Arrange (Given)
+        var repository = new MockCrudRepository();
+        var logger = new MockLogger();
+        var entity = new MockCrudEntity(repository, logger);
+        int invalidId = 0;
+
+        // Act (When)
+        var result = await entity.ReadAsync(invalidId);
+
+        // Assert (Then)
+        Assert.IsNull(
+            result,
+            "ReadAsync should return null when the entity is not found.");
+    }
+
+    /// <summary>
+    /// Unit test to verify that ReadAsync passes the CancellationToken to
+    /// the repository.
     /// </summary>
     /// <returns>A task representing the asynchronous unit test operation.</returns>
     [TestMethod]
     public async Task ReadAsync_WithCancellationToken_PassesTokenToRepository()
     {
-        // Arrange
+        // Arrange (Given)
         var repository = new MockCrudRepository();
         var logger = new MockLogger();
         var entity = new MockCrudEntity(repository, logger);
         int id = 100;
         var cts = new CancellationTokenSource();
 
-        // Act
+        // Act (When)
         await entity.ReadAsync(id, cts.Token);
 
-        // Assert
-        Assert.AreEqual(cts.Token, repository.LastCancellationToken, "CancellationToken should be passed to repository.");
+        // Assert (Then)
+        Assert.AreEqual(
+            cts.Token,
+            repository.LastCancellationToken,
+            "CancellationToken should be passed through to the repository.");
     }
 
     /// <summary>
-    /// Verifies that ReadAsync returns default when ID is default.
+    /// Unit test to verify that UpdateAsync returns the updated entity.
     /// </summary>
     /// <returns>A task representing the asynchronous unit test operation.</returns>
     [TestMethod]
-    public async Task ReadAsync_WithDefaultId_ReturnsDefault()
+    public async Task UpdateAsync_ValidEntity_ReturnsUpdatedEntity()
     {
-        // Arrange
+        // Arrange (Given)
         var repository = new MockCrudRepository();
         var logger = new MockLogger();
         var entity = new MockCrudEntity(repository, logger);
-        int defaultId = default(int);
+        var dto = new MockDto { Id = 100, Name = "Updated" };
 
-        // Act
-        var result = await entity.ReadAsync(defaultId);
+        // Act (When)
+        var result = await entity.UpdateAsync(dto);
 
-        // Assert
-        Assert.IsNull(result, "ReadAsync should return default when ID is default.");
-        Assert.IsFalse(repository.ReadCalled, "Repository ReadAsync should not be called when ID is default.");
+        // Assert (Then)
+        Assert.IsNotNull(
+            result,
+            "UpdateAsync should return the updated entity.");
+        Assert.AreEqual(
+            "Updated",
+            result.Name,
+            "Updated entity should have the expected Name.");
+        Assert.IsTrue(
+            repository.UpdateCalled,
+            "Repository UpdateAsync should be called.");
     }
 
     /// <summary>
-    /// Verifies that ReadAsync reads DTO successfully with valid ID.
-    /// </summary>
-    /// <returns>A task representing the asynchronous unit test operation.</returns>
-    [TestMethod]
-    public async Task ReadAsync_WithValidId_ReadsSuccessfully()
-    {
-        // Arrange
-        var repository = new MockCrudRepository();
-        var logger = new MockLogger();
-        var entity = new MockCrudEntity(repository, logger);
-        int id = 100;
-
-        // Act
-        var result = await entity.ReadAsync(id);
-
-        // Assert
-        Assert.IsNotNull(result, "ReadAsync should return a DTO.");
-        Assert.IsTrue(repository.ReadCalled, "Repository ReadAsync should be called.");
-    }
-
-    /// <summary>
-    /// Verifies that Repository property returns the injected repository.
-    /// </summary>
-    [TestMethod]
-    public void RepositoryProperty_ReturnsInjectedRepository()
-    {
-        // Arrange
-        var repository = new MockCrudRepository();
-        var logger = new MockLogger();
-        var entity = new MockCrudEntity(repository, logger);
-
-        // Act
-        var retrievedRepository = entity.Repository;
-
-        // Assert
-        Assert.AreSame(repository, retrievedRepository, "Repository property should return the injected repository.");
-    }
-
-    /// <summary>
-    /// Verifies that UpdateAsync uses cancellation token correctly.
+    /// Unit test to verify that UpdateAsync passes the CancellationToken to
+    /// the repository.
     /// </summary>
     /// <returns>A task representing the asynchronous unit test operation.</returns>
     [TestMethod]
     public async Task UpdateAsync_WithCancellationToken_PassesTokenToRepository()
     {
-        // Arrange
+        // Arrange (Given)
         var repository = new MockCrudRepository();
         var logger = new MockLogger();
         var entity = new MockCrudEntity(repository, logger);
         var dto = new MockDto { Id = 100, Name = "Updated" };
         var cts = new CancellationTokenSource();
 
-        // Act
+        // Act (When)
         await entity.UpdateAsync(dto, cts.Token);
 
-        // Assert
-        Assert.AreEqual(cts.Token, repository.LastCancellationToken, "CancellationToken should be passed to repository.");
+        // Assert (Then)
+        Assert.AreEqual(
+            cts.Token,
+            repository.LastCancellationToken,
+            "CancellationToken should be passed through to the repository.");
     }
 
     /// <summary>
-    /// Verifies that UpdateAsync returns early when DTO is null.
+    /// Unit test to verify that DeleteAsync deletes successfully with a valid ID.
     /// </summary>
     /// <returns>A task representing the asynchronous unit test operation.</returns>
     [TestMethod]
-    public async Task UpdateAsync_WithNullDto_ReturnsEarly()
+    public async Task DeleteAsync_ValidId_DeletesSuccessfully()
     {
-        // Arrange
+        // Arrange (Given)
+        var repository = new MockCrudRepository();
+        var logger = new MockLogger();
+        var entity = new MockCrudEntity(repository, logger);
+        int id = 100;
+
+        // Act (When)
+        await entity.DeleteAsync(id);
+
+        // Assert (Then)
+        Assert.IsTrue(
+            repository.DeleteCalled,
+            "Repository DeleteAsync should be called.");
+    }
+
+    /// <summary>
+    /// Unit test to verify that DeleteAsync throws when the entity is not found.
+    /// </summary>
+    /// <returns>A task representing the asynchronous unit test operation.</returns>
+    [TestMethod]
+    public async Task DeleteAsync_InvalidId_ThrowsInvalidOperationException()
+    {
+        // Arrange (Given)
+        var repository = new MockCrudRepository();
+        var logger = new MockLogger();
+        var entity = new MockCrudEntity(repository, logger);
+        int invalidId = 0;
+        bool exceptionThrown = false;
+
+        // Act (When)
+        try
+        {
+            await entity.DeleteAsync(invalidId);
+        }
+        catch (InvalidOperationException)
+        {
+            exceptionThrown = true;
+        }
+
+        // Assert (Then)
+        Assert.IsTrue(
+            exceptionThrown,
+            "DeleteAsync should throw InvalidOperationException when entity is not found.");
+    }
+
+    /// <summary>
+    /// Unit test to verify that DeleteAsync passes the CancellationToken to
+    /// the repository.
+    /// </summary>
+    /// <returns>A task representing the asynchronous unit test operation.</returns>
+    [TestMethod]
+    public async Task DeleteAsync_WithCancellationToken_PassesTokenToRepository()
+    {
+        // Arrange (Given)
+        var repository = new MockCrudRepository();
+        var logger = new MockLogger();
+        var entity = new MockCrudEntity(repository, logger);
+        int id = 100;
+        var cts = new CancellationTokenSource();
+
+        // Act (When)
+        await entity.DeleteAsync(id, cts.Token);
+
+        // Assert (Then)
+        Assert.AreEqual(
+            cts.Token,
+            repository.LastCancellationToken,
+            "CancellationToken should be passed through to the repository.");
+    }
+
+    /// <summary>
+    /// Unit test to verify that ExistsAsync returns true for an existing entity.
+    /// </summary>
+    /// <returns>A task representing the asynchronous unit test operation.</returns>
+    [TestMethod]
+    public async Task ExistsAsync_ValidId_ReturnsTrue()
+    {
+        // Arrange (Given)
+        var repository = new MockCrudRepository();
+        var logger = new MockLogger();
+        var entity = new MockCrudEntity(repository, logger);
+        int id = 100;
+
+        // Act (When)
+        var result = await entity.ExistsAsync(id);
+
+        // Assert (Then)
+        Assert.IsTrue(
+            result,
+            "ExistsAsync should return true when the entity exists.");
+    }
+
+    /// <summary>
+    /// Unit test to verify that ExistsAsync returns false for a non-existing entity.
+    /// </summary>
+    /// <returns>A task representing the asynchronous unit test operation.</returns>
+    [TestMethod]
+    public async Task ExistsAsync_InvalidId_ReturnsFalse()
+    {
+        // Arrange (Given)
+        var repository = new MockCrudRepository();
+        var logger = new MockLogger();
+        var entity = new MockCrudEntity(repository, logger);
+        int invalidId = 0;
+
+        // Act (When)
+        var result = await entity.ExistsAsync(invalidId);
+
+        // Assert (Then)
+        Assert.IsFalse(
+            result,
+            "ExistsAsync should return false when the entity does not exist.");
+    }
+
+    /// <summary>
+    /// Unit test to verify that UpsertAsync calls CreateAsync for a new entity.
+    /// </summary>
+    /// <returns>A task representing the asynchronous unit test operation.</returns>
+    [TestMethod]
+    public async Task UpsertAsync_NewEntity_CallsCreate()
+    {
+        // Arrange (Given)
+        var repository = new MockCrudRepository();
+        var logger = new MockLogger();
+        var entity = new MockCrudEntity(repository, logger);
+        var dto = new MockDto { Id = 0, Name = "New" };
+
+        // Act (When)
+        var result = await entity.UpsertAsync(dto);
+
+        // Assert (Then)
+        Assert.IsNotNull(
+            result,
+            "UpsertAsync should return the created entity.");
+        Assert.IsTrue(
+            repository.CreateCalled,
+            "Repository CreateAsync should be called for a new entity.");
+        Assert.IsFalse(
+            repository.UpdateCalled,
+            "Repository UpdateAsync should not be called for a new entity.");
+    }
+
+    /// <summary>
+    /// Unit test to verify that UpsertAsync calls UpdateAsync for an existing entity.
+    /// </summary>
+    /// <returns>A task representing the asynchronous unit test operation.</returns>
+    [TestMethod]
+    public async Task UpsertAsync_ExistingEntity_CallsUpdate()
+    {
+        // Arrange (Given)
+        var repository = new MockCrudRepository();
+        var logger = new MockLogger();
+        var entity = new MockCrudEntity(repository, logger);
+        var dto = new MockDto { Id = 100, Name = "Existing" };
+
+        // Act (When)
+        var result = await entity.UpsertAsync(dto);
+
+        // Assert (Then)
+        Assert.IsNotNull(
+            result,
+            "UpsertAsync should return the updated entity.");
+        Assert.IsTrue(
+            repository.UpdateCalled,
+            "Repository UpdateAsync should be called for an existing entity.");
+    }
+
+    /// <summary>
+    /// Unit test to verify that UpsertAsync throws ArgumentNullException when
+    /// entity is null.
+    /// </summary>
+    /// <returns>A task representing the asynchronous unit test operation.</returns>
+    [TestMethod]
+    public async Task UpsertAsync_NullEntity_ThrowsArgumentNullException()
+    {
+        // Arrange (Given)
         var repository = new MockCrudRepository();
         var logger = new MockLogger();
         var entity = new MockCrudEntity(repository, logger);
         MockDto? nullDto = null;
+        bool exceptionThrown = false;
 
-        // Act
-        await entity.UpdateAsync(nullDto!);
+        // Act (When)
+        try
+        {
+            await entity.UpsertAsync(nullDto!);
+        }
+        catch (ArgumentNullException)
+        {
+            exceptionThrown = true;
+        }
 
-        // Assert
-        Assert.IsFalse(repository.UpdateCalled, "Repository UpdateAsync should not be called when DTO is null.");
-    }
-
-    /// <summary>
-    /// Verifies that UpdateAsync updates DTO successfully with valid data.
-    /// </summary>
-    /// <returns>A task representing the asynchronous unit test operation.</returns>
-    [TestMethod]
-    public async Task UpdateAsync_WithValidDto_UpdatesSuccessfully()
-    {
-        // Arrange
-        var repository = new MockCrudRepository();
-        var logger = new MockLogger();
-        var entity = new MockCrudEntity(repository, logger);
-        var dto = new MockDto { Id = 100, Name = "Updated" };
-
-        // Act
-        await entity.UpdateAsync(dto);
-
-        // Assert
-        Assert.IsTrue(repository.UpdateCalled, "Repository UpdateAsync should be called.");
+        // Assert (Then)
+        Assert.IsTrue(
+            exceptionThrown,
+            "UpsertAsync should throw ArgumentNullException when entity is null.");
     }
 
     #endregion Public Methods

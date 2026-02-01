@@ -1,12 +1,14 @@
 ﻿namespace Roadbed.Test.Unit.Crud.Mocks;
 
 using Microsoft.Extensions.Logging;
-using Roadbed.Crud;
+using Roadbed.Crud.Repositories.Async;
+using Roadbed.Crud.Services.Async;
 
 /// <summary>
-/// Mock entity for testing BaseEntityWithCrudl.
+/// Mock service for testing <see cref="BaseAsyncCrudlService{TEntity, TId}"/>.
 /// </summary>
-public class MockCrudlEntity : BaseEntityWithCrudl<MockCrudlEntity, MockDto, int>
+public class MockCrudlEntity
+    : BaseAsyncCrudlService<MockDto, int>
 {
     #region Public Constructors
 
@@ -14,18 +16,10 @@ public class MockCrudlEntity : BaseEntityWithCrudl<MockCrudlEntity, MockDto, int
     /// Initializes a new instance of the <see cref="MockCrudlEntity"/> class.
     /// </summary>
     /// <param name="repository">Mock repository for data management.</param>
-    /// <param name="factory">Mock factory for logging.</param>
-    public MockCrudlEntity(IBaseRepositoryWithCrudl<MockDto, int> repository, ILoggerFactory factory)
-        : base(repository, factory)
-    {
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MockCrudlEntity"/> class.
-    /// </summary>
-    /// <param name="repository">Mock repository for data management.</param>
     /// <param name="logger">Mock logger for log messages.</param>
-    public MockCrudlEntity(IBaseRepositoryWithCrudl<MockDto, int> repository, ILogger logger)
+    public MockCrudlEntity(
+        IAsyncCrudlRepository<MockDto, int> repository,
+        ILogger logger)
         : base(repository, logger)
     {
     }

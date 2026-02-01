@@ -1,13 +1,14 @@
 ﻿namespace Roadbed.Test.Unit.Crud.Mocks;
 
 using Microsoft.Extensions.Logging;
-using Roadbed.Crud;
+using Roadbed.Crud.Repositories.Async;
+using Roadbed.Crud.Services.Async;
 
 /// <summary>
-/// Mock entity for testing MockListOnlyEntity.
+/// Mock service for testing <see cref="BaseAsyncListOnlyService{TEntity, TId}"/>.
 /// </summary>
 public class MockListOnlyEntity
-    : BaseEntityWithListOnly<MockListOnlyEntity, MockDto, int>
+    : BaseAsyncListOnlyService<MockDto, int>
 {
     #region Public Constructors
 
@@ -15,18 +16,10 @@ public class MockListOnlyEntity
     /// Initializes a new instance of the <see cref="MockListOnlyEntity"/> class.
     /// </summary>
     /// <param name="repository">Mock repository for data management.</param>
-    /// <param name="factory">Mock factory for logging.</param>
-    public MockListOnlyEntity(IBaseRepositoryWithListOnly<MockDto, int> repository, ILoggerFactory factory)
-        : base(repository, factory)
-    {
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MockListOnlyEntity"/> class.
-    /// </summary>
-    /// <param name="repository">Mock repository for data management.</param>
     /// <param name="logger">Mock logger for log messages.</param>
-    public MockListOnlyEntity(IBaseRepositoryWithListOnly<MockDto, int> repository, ILogger logger)
+    public MockListOnlyEntity(
+        IAsyncListOnlyRepository<MockDto, int> repository,
+        ILogger logger)
         : base(repository, logger)
     {
     }

@@ -28,97 +28,6 @@ public class BaseDataTransferObjectTests
     }
 
     /// <summary>
-    /// Verifies that the default constructor creates an instance with null Errors.
-    /// </summary>
-    [TestMethod]
-    public void Constructor_Default_SetsErrorsToNull()
-    {
-        // Act
-        var dto = new TestDto();
-
-        // Assert
-        Assert.IsNull(dto.Errors, "Errors should be null after default construction.");
-    }
-
-    /// <summary>
-    /// Verifies that the Errors property can be set and retrieved.
-    /// </summary>
-    [TestMethod]
-    public void ErrorsProperty_CanSetAndGet()
-    {
-        // Arrange
-        var dto = new TestDto();
-        var expectedErrors = new List<string> { "Error 1", "Error 2" };
-
-        // Act
-        var errorsField = typeof(BaseDataTransferObject<int>).GetProperty("Errors");
-        errorsField?.SetValue(dto, expectedErrors);
-
-        // Assert
-        Assert.AreEqual(expectedErrors, dto.Errors, "Errors should return the list that was set.");
-    }
-
-    /// <summary>
-    /// Verifies that the Errors property can be set to an empty list.
-    /// </summary>
-    [TestMethod]
-    public void ErrorsProperty_SetToEmptyList_AcceptsEmptyList()
-    {
-        // Arrange
-        var dto = new TestDto();
-        var emptyErrors = new List<string>();
-
-        // Act
-        var errorsField = typeof(BaseDataTransferObject<int>).GetProperty("Errors");
-        errorsField?.SetValue(dto, emptyErrors);
-
-        // Assert
-        Assert.IsNotNull(dto.Errors, "Errors should not be null.");
-        Assert.IsEmpty(dto.Errors, "Errors should be an empty list.");
-    }
-
-    /// <summary>
-    /// Verifies that the Errors property can be set to null.
-    /// </summary>
-    [TestMethod]
-    public void ErrorsProperty_SetToNull_AcceptsNull()
-    {
-        // Arrange
-        var dto = new TestDto();
-        var errors = new List<string> { "Error 1" };
-        var errorsField = typeof(BaseDataTransferObject<int>).GetProperty("Errors");
-        errorsField?.SetValue(dto, errors);
-
-        // Act
-        errorsField?.SetValue(dto, null);
-
-        // Assert
-        Assert.IsNull(dto.Errors, "Errors should accept null value.");
-    }
-
-    /// <summary>
-    /// Verifies that the Errors property can contain multiple error messages.
-    /// </summary>
-    [TestMethod]
-    public void ErrorsProperty_WithMultipleErrors_StoresAllErrors()
-    {
-        // Arrange
-        var dto = new TestDto();
-        var errors = new List<string> { "Error 1", "Error 2", "Error 3" };
-
-        // Act
-        var errorsField = typeof(BaseDataTransferObject<int>).GetProperty("Errors");
-        errorsField?.SetValue(dto, errors);
-
-        // Assert
-        Assert.IsNotNull(dto.Errors, "Errors should not be null.");
-        Assert.HasCount(3, dto.Errors, "Errors should contain all error messages.");
-        Assert.AreEqual("Error 1", dto.Errors[0]);
-        Assert.AreEqual("Error 2", dto.Errors[1]);
-        Assert.AreEqual("Error 3", dto.Errors[2]);
-    }
-
-    /// <summary>
     /// Verifies that the Id property can be updated multiple times.
     /// </summary>
     [TestMethod]
@@ -214,7 +123,7 @@ public class BaseDataTransferObjectTests
         var dto = new TestDto();
 
         // Act
-        bool implementsInterface = dto is IDataTransferObject<int>;
+        bool implementsInterface = dto is IEntity<int>;
 
         // Assert
         Assert.IsTrue(implementsInterface, "Should implement IDataTransferObject<TId>.");
@@ -326,21 +235,21 @@ public class BaseDataTransferObjectTests
     /// <summary>
     /// Concrete implementation of BaseDataTransferObject for testing with integer Id.
     /// </summary>
-    private record TestDto : BaseDataTransferObject<int>
+    private record TestDto : BaseEntityRecord<int>
     {
     }
 
     /// <summary>
     /// Concrete implementation of BaseDataTransferObject for testing with string Id.
     /// </summary>
-    private record TestDtoWithStringId : BaseDataTransferObject<string>
+    private record TestDtoWithStringId : BaseEntityRecord<string>
     {
     }
 
     /// <summary>
     /// Concrete implementation of BaseDataTransferObject for testing with Guid Id.
     /// </summary>
-    private record TestDtoWithGuidId : BaseDataTransferObject<Guid>
+    private record TestDtoWithGuidId : BaseEntityRecord<Guid>
     {
     }
 }

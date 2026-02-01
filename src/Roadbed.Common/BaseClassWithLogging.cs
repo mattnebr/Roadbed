@@ -1,80 +1,73 @@
 ﻿/*
- * The namespace Roadbed.Common was removed on purpose and replaced with Roadbed so that no additional using statements are required.
+ * The namespace Roadbed.Common was removed on purpose and replaced with Roadbed
+ * so that no additional using statements are required.
  */
 
 namespace Roadbed;
 
 using System;
-using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 /// <summary>
-/// Base class with logging implemented.
+/// Base class providing logging convenience methods.
 /// </summary>
-/// <typeparam name="TCategoryName">Type inheriting from the Base.</typeparam>
-public abstract class BaseClassWithLogging<TCategoryName>
+/// <remarks>
+/// <para>
+/// Provides level-checked convenience methods (<see cref="LogDebug(string)"/>,
+/// <see cref="LogInformation(string)"/>, etc.) that check
+/// <see cref="ILogger.IsEnabled(LogLevel)"/> before formatting messages. This
+/// prevents unnecessary string allocation and parameter boxing when the log level
+/// is disabled.
+/// </para>
+/// <para>
+/// Subclasses should use the convenience methods (e.g., <c>this.LogDebug(...)</c>)
+/// instead of accessing the logger directly.
+/// </para>
+/// <para>
+/// For subclasses that need <see cref="ILoggerFactory"/> or a typed
+/// <see cref="ILogger{TCategoryName}"/>, use
+/// <see cref="BaseClassWithLoggingFactory{TCategoryName}"/> instead.
+/// </para>
+/// </remarks>
+public abstract class BaseClassWithLogging
 {
     #region Private Fields
 
     /// <summary>
-    /// Container for the public property Logger.
+    /// Logger instance used by all convenience methods.
     /// </summary>
-    private readonly ILogger<TCategoryName> _logger;
-
-    /// <summary>
-    /// Container for the public property LoggerFactory.
-    /// </summary>
-    private readonly ILoggerFactory _loggerFactory;
+    private readonly ILogger _logger;
 
     #endregion Private Fields
 
     #region Protected Constructors
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="BaseClassWithLogging{TCategoryName}"/> class.
+    /// Initializes a new instance of the <see cref="BaseClassWithLogging"/> class
+    /// with a <see cref="NullLogger"/> instance.
     /// </summary>
     protected BaseClassWithLogging()
     {
-        this._loggerFactory = NullLoggerFactory.Instance;
-        this._logger = NullLogger<TCategoryName>.Instance;
+        this._logger = NullLogger.Instance;
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="BaseClassWithLogging{TCategoryName}"/> class.
+    /// Initializes a new instance of the <see cref="BaseClassWithLogging"/> class.
     /// </summary>
     /// <param name="logger">Represents a type used to perform logging.</param>
+    /// <remarks>
+    /// When <paramref name="logger"/> is <c>null</c>, a <see cref="NullLogger"/>
+    /// instance is used. The <see cref="ILogger"/> may be a typed
+    /// <see cref="ILogger{TCategoryName}"/> — the category information is preserved
+    /// in the log output.
+    /// </remarks>
     protected BaseClassWithLogging(ILogger logger)
     {
-        this._loggerFactory = NullLoggerFactory.Instance;
-        this._logger = logger as ILogger<TCategoryName> ?? NullLogger<TCategoryName>.Instance;
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="BaseClassWithLogging{TCategoryName}"/> class.
-    /// </summary>
-    /// <param name="loggerFactory">Represents a type used to configure the logging system and create instances of ILogger from the registered ILoggerProviders.</param>
-    protected BaseClassWithLogging(ILoggerFactory loggerFactory)
-    {
-        this._loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
-        this._logger = this._loggerFactory.CreateLogger<TCategoryName>();
+        this._logger = logger ?? NullLogger.Instance;
     }
 
     #endregion Protected Constructors
-
-    #region Public Properties
-
-    /// <summary>
-    /// Gets the type used to perform logging.
-    /// </summary>
-    public ILogger<TCategoryName> Logger => this._logger;
-
-    /// <summary>
-    /// Gets the type used to configure the logging system and create instances of ILogger from the registered ILoggerProviders.
-    /// </summary>
-    public ILoggerFactory LoggerFactory => this._loggerFactory;
-
-    #endregion Public Properties
 
     #region Public Methods
 
@@ -95,7 +88,47 @@ public abstract class BaseClassWithLogging<TCategoryName>
     /// </remarks>
     public IDisposable? BeginScope(string key, object value)
     {
-        return this.Logger.BeginScope(key, value);
+        return this._logger.BeginScope(key, value);
+    }
+
+    /// <summary>
+    /// Logs a message with a severity level of <see cref="LogLevel.Critical"/>.
+    /// </summary>
+    /// <param name="message">Message to log.</param>
+    public void LogCritical(string message)
+    {
+        this._logger.LogWithCheck(LogLevel.Critical, message);
+    }
+
+    /// <summary>
+    /// Logs a message with a severity level of <see cref="LogLevel.Critical"/>.
+    /// </summary>
+    /// <param name="message">Message to log.</param>
+    /// <param name="param">Message parameters.</param>
+    public void LogCritical(string message, params object[] param)
+    {
+        this._logger.LogWithCheck(LogLevel.Critical, message, param);
+    }
+
+    /// <summary>
+    /// Logs an exception with a severity level of <see cref="LogLevel.Critical"/>.
+    /// </summary>
+    /// <param name="exception">Exception to log.</param>
+    /// <param name="message">Message to log.</param>
+    public void LogCritical(Exception exception, string message)
+    {
+        this._logger.LogCritical(exception, message);
+    }
+
+    /// <summary>
+    /// Logs an exception with a severity level of <see cref="LogLevel.Critical"/>.
+    /// </summary>
+    /// <param name="exception">Exception to log.</param>
+    /// <param name="message">Message to log.</param>
+    /// <param name="param">Message parameters.</param>
+    public void LogCritical(Exception exception, string message, params object[] param)
+    {
+        this._logger.LogCritical(exception, message, param);
     }
 
     /// <summary>
@@ -104,17 +137,17 @@ public abstract class BaseClassWithLogging<TCategoryName>
     /// <param name="message">Message to log.</param>
     public void LogDebug(string message)
     {
-        this.Logger.LogWithCheck(LogLevel.Debug, message);
+        this._logger.LogWithCheck(LogLevel.Debug, message);
     }
 
     /// <summary>
-    /// Logs a message with a severity level of <see cref="Debug"/>.
+    /// Logs a message with a severity level of <see cref="LogLevel.Debug"/>.
     /// </summary>
     /// <param name="message">Message to log.</param>
     /// <param name="param">Message parameters.</param>
     public void LogDebug(string message, params object[] param)
     {
-        this.Logger.LogWithCheck(LogLevel.Debug, message, param);
+        this._logger.LogWithCheck(LogLevel.Debug, message, param);
     }
 
     /// <summary>
@@ -123,7 +156,7 @@ public abstract class BaseClassWithLogging<TCategoryName>
     /// <param name="message">Message to log.</param>
     public void LogError(string message)
     {
-        this.Logger.LogWithCheck(LogLevel.Error, message);
+        this._logger.LogWithCheck(LogLevel.Error, message);
     }
 
     /// <summary>
@@ -133,7 +166,7 @@ public abstract class BaseClassWithLogging<TCategoryName>
     /// <param name="param">Message parameters.</param>
     public void LogError(string message, params object[] param)
     {
-        this.Logger.LogWithCheck(LogLevel.Error, message, param);
+        this._logger.LogWithCheck(LogLevel.Error, message, param);
     }
 
     /// <summary>
@@ -143,7 +176,7 @@ public abstract class BaseClassWithLogging<TCategoryName>
     /// <param name="message">Message to log.</param>
     public void LogError(Exception exception, string message)
     {
-        this.Logger.LogError(exception, message);
+        this._logger.LogError(exception, message);
     }
 
     /// <summary>
@@ -154,7 +187,7 @@ public abstract class BaseClassWithLogging<TCategoryName>
     /// <param name="param">Message parameters.</param>
     public void LogError(Exception exception, string message, params object[] param)
     {
-        this.Logger.LogError(exception, message, param);
+        this._logger.LogError(exception, message, param);
     }
 
     /// <summary>
@@ -163,7 +196,7 @@ public abstract class BaseClassWithLogging<TCategoryName>
     /// <param name="message">Message to log.</param>
     public void LogInformation(string message)
     {
-        this.Logger.LogWithCheck(LogLevel.Information, message);
+        this._logger.LogWithCheck(LogLevel.Information, message);
     }
 
     /// <summary>
@@ -173,7 +206,7 @@ public abstract class BaseClassWithLogging<TCategoryName>
     /// <param name="param">Message parameters.</param>
     public void LogInformation(string message, params object[] param)
     {
-        this.Logger.LogWithCheck(LogLevel.Information, message, param);
+        this._logger.LogWithCheck(LogLevel.Information, message, param);
     }
 
     /// <summary>
@@ -182,7 +215,7 @@ public abstract class BaseClassWithLogging<TCategoryName>
     /// <param name="message">Message to log.</param>
     public void LogTrace(string message)
     {
-        this.Logger.LogWithCheck(LogLevel.Trace, message);
+        this._logger.LogWithCheck(LogLevel.Trace, message);
     }
 
     /// <summary>
@@ -192,7 +225,7 @@ public abstract class BaseClassWithLogging<TCategoryName>
     /// <param name="param">Message parameters.</param>
     public void LogTrace(string message, params object[] param)
     {
-        this.Logger.LogWithCheck(LogLevel.Trace, message, param);
+        this._logger.LogWithCheck(LogLevel.Trace, message, param);
     }
 
     /// <summary>
@@ -201,7 +234,7 @@ public abstract class BaseClassWithLogging<TCategoryName>
     /// <param name="message">Message to log.</param>
     public void LogWarning(string message)
     {
-        this.Logger.LogWithCheck(LogLevel.Warning, message);
+        this._logger.LogWithCheck(LogLevel.Warning, message);
     }
 
     /// <summary>
@@ -211,7 +244,28 @@ public abstract class BaseClassWithLogging<TCategoryName>
     /// <param name="param">Message parameters.</param>
     public void LogWarning(string message, params object[] param)
     {
-        this.Logger.LogWithCheck(LogLevel.Warning, message, param);
+        this._logger.LogWithCheck(LogLevel.Warning, message, param);
+    }
+
+    /// <summary>
+    /// Logs an exception with a severity level of <see cref="LogLevel.Warning"/>.
+    /// </summary>
+    /// <param name="exception">Exception to log.</param>
+    /// <param name="message">Message to log.</param>
+    public void LogWarning(Exception exception, string message)
+    {
+        this._logger.LogWarning(exception, message);
+    }
+
+    /// <summary>
+    /// Logs an exception with a severity level of <see cref="LogLevel.Warning"/>.
+    /// </summary>
+    /// <param name="exception">Exception to log.</param>
+    /// <param name="message">Message to log.</param>
+    /// <param name="param">Message parameters.</param>
+    public void LogWarning(Exception exception, string message, params object[] param)
+    {
+        this._logger.LogWarning(exception, message, param);
     }
 
     #endregion Public Methods

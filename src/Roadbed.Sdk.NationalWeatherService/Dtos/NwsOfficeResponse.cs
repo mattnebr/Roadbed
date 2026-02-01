@@ -11,7 +11,7 @@ using Roadbed.Crud;
 /// organizational structure, and areas of responsibility.
 /// </remarks>
 internal sealed record NwsOfficeResponse
-    : BaseDataTransferObject<string>
+    : BaseEntityRecord<string>
 {
     /// <summary>
     /// Gets or sets the JSON-LD context.

@@ -1000,7 +1000,7 @@ public class SqliteExecutorTests
             };
 
             // Act (When)
-            string result = await SqliteExecutor.ExecuteScalarAsync<string>(scalarRequest, connectionFactory);
+            string? result = await SqliteExecutor.ExecuteScalarAsync<string>(scalarRequest, connectionFactory);
 
             // Assert (Then)
             Assert.AreEqual(

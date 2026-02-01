@@ -18,7 +18,7 @@ using Roadbed.Sdk.NationalWeatherService.Repositories;
 /// Entity for the National Weather Service administrative district (state/territory).
 /// </summary>
 public sealed class NwsAdminDistrict
-    : BaseClassWithLogging<NwsAdminDistrict>
+    : BaseClassWithLoggingFactory<NwsAdminDistrict>
 {
     #region Public Constructors
 

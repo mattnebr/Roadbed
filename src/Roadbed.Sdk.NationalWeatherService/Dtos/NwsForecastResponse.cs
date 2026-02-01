@@ -11,7 +11,7 @@ using Roadbed.Crud;
 /// This is the response from both daily and hourly forecast API endpoints.
 /// </remarks>
 internal sealed record NwsForecastResponse
-    : BaseDataTransferObject<string>
+    : BaseEntityRecord<string>
 {
     /// <summary>
     /// Gets or sets the GeoJSON type (should be "Feature").

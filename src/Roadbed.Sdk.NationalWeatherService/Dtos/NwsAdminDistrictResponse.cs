@@ -11,7 +11,7 @@ using Roadbed.Crud;
 /// within a state or administrative district. This is a paginated GeoJSON FeatureCollection.
 /// </remarks>
 internal sealed record NwsAdminDistrictResponse
-    : BaseDataTransferObject<string>
+    : BaseEntityRecord<string>
 {
     /// <summary>
     /// Gets or sets the JSON-LD context.

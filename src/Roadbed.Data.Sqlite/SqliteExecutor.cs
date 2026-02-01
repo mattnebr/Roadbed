@@ -152,7 +152,7 @@ public static class SqliteExecutor
     /// <returns>The scalar value from the first column of the first row.</returns>
     /// <exception cref="ArgumentNullException">Thrown if request or connectionFactory is null.</exception>
     /// <exception cref="InvalidOperationException">Thrown if all retries are exhausted.</exception>
-    public static async Task<T> ExecuteScalarAsync<T>(
+    public static async Task<T?> ExecuteScalarAsync<T>(
         DataExecutorRequest request,
         IDataConnectionFactory connectionFactory,
         ILogger? logger = null,
@@ -422,7 +422,7 @@ public static class SqliteExecutor
         "Minor Code Smell",
         "S6667:Logging in a catch clause should pass the caught exception as a parameter.",
         Justification = "Last exception logged as Error outside of catch block.")]
-    private static async Task<T> ExecuteScalarWithRetryAsync<T>(
+    private static async Task<T?> ExecuteScalarWithRetryAsync<T>(
         DataExecutorRequest request,
         IDataConnectionFactory connectionFactory,
         ILogger logger,

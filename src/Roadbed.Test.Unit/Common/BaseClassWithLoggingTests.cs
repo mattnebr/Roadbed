@@ -545,7 +545,7 @@ public class BaseClassWithLoggingTests
     /// <summary>
     /// Test implementation of BaseClassWithLogging for testing purposes.
     /// </summary>
-    private class TestClass : BaseClassWithLogging<TestClass>
+    private class TestClass : BaseClassWithLoggingFactory<TestClass>
     {
         #region Public Constructors
 

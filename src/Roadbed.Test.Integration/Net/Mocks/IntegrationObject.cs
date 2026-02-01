@@ -1,13 +1,14 @@
 ﻿namespace Roadbed.Test.Integration.Net.Mocks;
 
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Roadbed.Crud;
+using Roadbed.Crud.Services.Async;
 
 /// <summary>
 /// Mock Integration Object entity for integration testing.
 /// </summary>
 internal class IntegrationObject
-    : BaseEntityWithCrudl<IntegrationObject, IntegrationObjectRow, string>
+    : BaseAsyncCrudlService<IntegrationObjectRow, string>
 {
     #region Public Constructors
 
@@ -16,8 +17,9 @@ internal class IntegrationObject
     /// </summary>
     public IntegrationObject()
         : base(
-            new IntegrationObjectRepository(),
-            NullLoggerFactory.Instance)
+            new IntegrationObjectRepository(
+                NullLogger<IntegrationObjectRepository>.Instance),
+            NullLogger<IntegrationObject>.Instance)
     {
     }
 

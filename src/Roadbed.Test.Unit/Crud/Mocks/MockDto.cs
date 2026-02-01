@@ -1,22 +1,14 @@
 ﻿namespace Roadbed.Test.Unit.Crud.Mocks;
 
-using System.Collections.Generic;
 using Roadbed.Crud;
 
 /// <summary>
 /// Mock DTO for testing.
 /// </summary>
 public class MockDto
-    : IDataTransferObject<int>
+    : IEntity<int>
 {
     #region Public Properties
-
-    /// <inheritdoc />
-    public List<string>? Errors
-    {
-        get;
-        internal set;
-    }
 
     /// <summary>
     /// Gets or sets the ID.

@@ -1,10 +1,12 @@
 ﻿namespace Roadbed.Test.Unit.Crud;
 
-using Roadbed.Crud;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Roadbed.Crud.Repositories.Async;
 using Roadbed.Test.Unit.Crud.Mocks;
 
 /// <summary>
-/// Contains unit tests for verifying the behavior of the BaseEntityWithListOnly class.
+/// Contains unit tests for verifying the behavior of the
+/// <see cref="Roadbed.Crud.Services.Async.BaseAsyncListOnlyService{TEntity, TId}"/> class.
 /// </summary>
 [TestClass]
 public class BaseEntityWithListOnlyTests
@@ -12,147 +14,98 @@ public class BaseEntityWithListOnlyTests
     #region Public Methods
 
     /// <summary>
-    /// Verifies that constructor with ILogger initializes successfully.
+    /// Unit test to verify that constructor with ILogger initializes successfully.
     /// </summary>
     [TestMethod]
     public void Constructor_WithLogger_InitializesSuccessfully()
     {
-        // Arrange
+        // Arrange (Given)
         var repository = new MockListOnlyRepository();
         var logger = new MockLogger();
 
-        // Act
+        // Act (When)
         var entity = new MockListOnlyEntity(repository, logger);
 
-        // Assert
-        Assert.IsNotNull(entity, "Entity should be initialized.");
-        Assert.IsNotNull(entity.Repository, "Repository should be set.");
+        // Assert (Then)
+        Assert.IsNotNull(
+            entity,
+            "Entity should be initialized when valid repository and logger are provided.");
     }
 
     /// <summary>
-    /// Verifies that constructor with ILogger throws when repository is null.
+    /// Unit test to verify that constructor throws ArgumentNullException when
+    /// repository is null.
     /// </summary>
     [TestMethod]
-    public void Constructor_WithLoggerAndNullRepository_ThrowsArgumentNullException()
+    public void Constructor_NullRepository_ThrowsArgumentNullException()
     {
-        // Arrange
-        IBaseRepositoryWithListOnly<MockDto, int>? nullRepository = null;
+        // Arrange (Given)
+        IAsyncListOnlyRepository<MockDto, int>? nullRepository = null;
         var logger = new MockLogger();
+        bool exceptionThrown = false;
 
-        // Act
-        bool threwException = false;
+        // Act (When)
         try
         {
             var entity = new MockListOnlyEntity(nullRepository!, logger);
         }
         catch (ArgumentNullException)
         {
-            threwException = true;
+            exceptionThrown = true;
         }
 
-        // Assert
-        Assert.IsTrue(threwException, "Should throw ArgumentNullException when repository is null.");
+        // Assert (Then)
+        Assert.IsTrue(
+            exceptionThrown,
+            "Constructor should throw ArgumentNullException when repository is null.");
     }
 
     /// <summary>
-    /// Verifies that constructor with ILoggerFactory initializes successfully.
-    /// </summary>
-    [TestMethod]
-    public void Constructor_WithLoggerFactory_InitializesSuccessfully()
-    {
-        // Arrange
-        var repository = new MockListOnlyRepository();
-        var loggerFactory = new MockLoggerFactory();
-
-        // Act
-        var entity = new MockListOnlyEntity(repository, loggerFactory);
-
-        // Assert
-        Assert.IsNotNull(entity, "Entity should be initialized.");
-        Assert.IsNotNull(entity.Repository, "Repository should be set.");
-    }
-
-    /// <summary>
-    /// Verifies that constructor with ILoggerFactory throws when repository is null.
-    /// </summary>
-    [TestMethod]
-    public void Constructor_WithLoggerFactoryAndNullRepository_ThrowsArgumentNullException()
-    {
-        // Arrange
-        IBaseRepositoryWithListOnly<MockDto, int>? nullRepository = null;
-        var loggerFactory = new MockLoggerFactory();
-
-        // Act
-        bool threwException = false;
-        try
-        {
-            var entity = new MockListOnlyEntity(nullRepository!, loggerFactory);
-        }
-        catch (ArgumentNullException)
-        {
-            threwException = true;
-        }
-
-        // Assert
-        Assert.IsTrue(threwException, "Should throw ArgumentNullException when repository is null.");
-    }
-
-    /// <summary>
-    /// Verifies that ListAsync returns list of DTOs successfully.
+    /// Unit test to verify that ListAsync returns a list of entities successfully.
     /// </summary>
     /// <returns>A task representing the asynchronous unit test operation.</returns>
     [TestMethod]
-    public async Task ListAsync_ReturnsListSuccessfully()
+    public async Task ListAsync_ValidCall_ReturnsListSuccessfully()
     {
-        // Arrange
+        // Arrange (Given)
         var repository = new MockListOnlyRepository();
         var logger = new MockLogger();
         var entity = new MockListOnlyEntity(repository, logger);
 
-        // Act
+        // Act (When)
         var result = await entity.ListAsync();
 
-        // Assert
-        Assert.IsNotNull(result, "ListAsync should return a list.");
-        Assert.IsTrue(repository.ListCalled, "Repository ListAsync should be called.");
+        // Assert (Then)
+        Assert.IsNotNull(
+            result,
+            "ListAsync should return a non-null list.");
+        Assert.IsTrue(
+            repository.ListCalled,
+            "Repository ListAsync should be called when service ListAsync is invoked.");
     }
 
     /// <summary>
-    /// Verifies that ListAsync uses cancellation token correctly.
+    /// Unit test to verify that ListAsync passes the CancellationToken to
+    /// the repository.
     /// </summary>
     /// <returns>A task representing the asynchronous unit test operation.</returns>
     [TestMethod]
     public async Task ListAsync_WithCancellationToken_PassesTokenToRepository()
     {
-        // Arrange
+        // Arrange (Given)
         var repository = new MockListOnlyRepository();
         var logger = new MockLogger();
         var entity = new MockListOnlyEntity(repository, logger);
         var cts = new CancellationTokenSource();
 
-        // Act
+        // Act (When)
         await entity.ListAsync(cts.Token);
 
-        // Assert
-        Assert.AreEqual(cts.Token, repository.LastCancellationToken, "CancellationToken should be passed to repository.");
-    }
-
-    /// <summary>
-    /// Verifies that Repository property returns the injected repository.
-    /// </summary>
-    [TestMethod]
-    public void RepositoryProperty_ReturnsInjectedRepository()
-    {
-        // Arrange
-        var repository = new MockListOnlyRepository();
-        var logger = new MockLogger();
-        var entity = new MockListOnlyEntity(repository, logger);
-
-        // Act
-        var retrievedRepository = entity.Repository;
-
-        // Assert
-        Assert.AreSame(repository, retrievedRepository, "Repository property should return the injected repository.");
+        // Assert (Then)
+        Assert.AreEqual(
+            cts.Token,
+            repository.LastCancellationToken,
+            "CancellationToken should be passed through to the repository.");
     }
 
     #endregion Public Methods

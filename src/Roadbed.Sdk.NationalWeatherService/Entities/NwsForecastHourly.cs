@@ -22,7 +22,7 @@ using Roadbed.Sdk.NationalWeatherService.Repositories;
 /// Provides hourly forecast periods for the next seven days based on NWS grid coordinates.
 /// </remarks>
 public sealed class NwsForecastHourly
-    : BaseClassWithLogging<NwsForecastHourly>
+    : BaseClassWithLoggingFactory<NwsForecastHourly>
 {
     #region Public Constructors
 

@@ -351,7 +351,7 @@ public class DapperNullableDateTimeHandlerTests
     private IDataConnectionFactory CreateConnectionFactory()
     {
         string uniqueDbName = $"TestDb_{Guid.NewGuid():N}";
-        var connectionString = new DataConnecionString(DataConnectionStringType.SqliteInMemory)
+        var connectionString = new DataConnecionString(DataConnectionStringType.SQLiteInMemory)
         {
             DatabaseSource = uniqueDbName,
         };

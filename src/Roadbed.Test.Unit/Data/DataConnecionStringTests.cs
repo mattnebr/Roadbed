@@ -19,7 +19,7 @@ public class DataConnecionStringTests
     public void ConnectionString_AccessMultipleTimes_ReturnsConsistentValue()
     {
         // Arrange (Given)
-        var connectionString = new DataConnecionString(DataConnectionStringType.Sqlite)
+        var connectionString = new DataConnecionString(DataConnectionStringType.SQLite)
         {
             DatabaseSource = "test.db",
         };
@@ -48,7 +48,7 @@ public class DataConnecionStringTests
     {
         // Arrange (Given)
         string originalString = "Custom Connection String;Option=Value;";
-        var connectionString = new DataConnecionString(DataConnectionStringType.Sqlite, originalString);
+        var connectionString = new DataConnecionString(DataConnectionStringType.SQLite, originalString);
 
         // Act (When)
         string result = connectionString.ConnectionString;
@@ -67,7 +67,7 @@ public class DataConnecionStringTests
     public void ConnectionString_SqliteWithNullDatabaseSource_GeneratesStringWithNull()
     {
         // Arrange (Given)
-        var connectionString = new DataConnecionString(DataConnectionStringType.Sqlite)
+        var connectionString = new DataConnecionString(DataConnectionStringType.SQLite)
         {
             DatabaseSource = null,
         };
@@ -109,7 +109,7 @@ public class DataConnecionStringTests
     {
         // Arrange (Given)
         var connectionString = new DataConnecionString(
-            DataConnectionStringType.Sqlite,
+            DataConnectionStringType.SQLite,
             "Data Source=test.db;");
 
         // Act (When)
@@ -132,7 +132,7 @@ public class DataConnecionStringTests
         // Arrange (Given)
         string originalString = "Data Source=test.db;Version=3;";
         var connectionString = new DataConnecionString(
-            DataConnectionStringType.Sqlite,
+            DataConnectionStringType.SQLite,
             originalString);
 
         // Act (When)
@@ -167,16 +167,24 @@ public class DataConnecionStringTests
     public void ConnectionStringType_DifferentTypes_HandledCorrectly()
     {
         // Arrange (Given)
-        var sqliteConnection = new DataConnecionString(DataConnectionStringType.Sqlite)
+        var sqliteConnection = new DataConnecionString(DataConnectionStringType.SQLite)
         {
             DatabaseSource = "file.db",
         };
-        var inMemoryConnection = new DataConnecionString(DataConnectionStringType.SqliteInMemory);
+        var inMemoryConnection = new DataConnecionString(DataConnectionStringType.SQLiteInMemory);
+        var postgresqlConnection = new DataConnecionString(DataConnectionStringType.PostgreSQL)
+        {
+            ServerName = "localhost",
+            DatabaseSource = "mydb",
+            Username = "admin",
+            Password = "secret",
+        };
         var unknownConnection = new DataConnecionString(DataConnectionStringType.Unknown);
 
         // Act (When)
         string sqliteResult = sqliteConnection.ConnectionString;
         string inMemoryResult = inMemoryConnection.ConnectionString;
+        string postgresqlResult = postgresqlConnection.ConnectionString;
         string unknownResult = unknownConnection.ConnectionString;
 
         // Assert (Then)
@@ -188,6 +196,10 @@ public class DataConnecionStringTests
             "Mode=Memory",
             inMemoryResult,
             "In-memory connection string should contain memory mode.");
+        Assert.Contains(
+            "Host=localhost",
+            postgresqlResult,
+            "PostgreSQL connection string should contain host.");
         Assert.AreEqual(
             string.Empty,
             unknownResult,
@@ -202,7 +214,7 @@ public class DataConnecionStringTests
     {
         // Arrange (Given)
         string emptyConnectionString = string.Empty;
-        DataConnectionStringType type = DataConnectionStringType.Sqlite;
+        DataConnectionStringType type = DataConnectionStringType.SQLite;
 
         // Act (When)
         var connectionString = new DataConnecionString(type, emptyConnectionString);
@@ -264,7 +276,7 @@ public class DataConnecionStringTests
     {
         // Arrange (Given)
         string? nullConnectionString = null;
-        DataConnectionStringType type = DataConnectionStringType.SqliteInMemory;
+        DataConnectionStringType type = DataConnectionStringType.SQLiteInMemory;
 
         // Act (When)
         var connectionString = new DataConnecionString(type, nullConnectionString!);
@@ -284,7 +296,7 @@ public class DataConnecionStringTests
     {
         // Arrange (Given)
         string expectedConnectionString = "Data Source=test.db;Version=3;";
-        DataConnectionStringType expectedType = DataConnectionStringType.Sqlite;
+        DataConnectionStringType expectedType = DataConnectionStringType.SQLite;
 
         // Act (When)
         var connectionString = new DataConnecionString(expectedType, expectedConnectionString);
@@ -366,6 +378,253 @@ public class DataConnecionStringTests
             expectedPassword,
             connectionString.Password,
             "Password should return the value that was set.");
+    }
+
+    /// <summary>
+    /// Unit test to verify that PostgreSQL connection string contains Host parameter.
+    /// </summary>
+    [TestMethod]
+    public void ConnectionString_PostgresqlType_ContainsHost()
+    {
+        // Arrange (Given)
+        var connectionString = new DataConnecionString(DataConnectionStringType.PostgreSQL)
+        {
+            ServerName = "db.example.com",
+            DatabaseSource = "mydb",
+            Username = "admin",
+            Password = "secret",
+        };
+
+        // Act (When)
+        string result = connectionString.ConnectionString;
+
+        // Assert (Then)
+        Assert.Contains(
+            "Host=db.example.com",
+            result,
+            "PostgreSQL connection string should contain Host parameter with ServerName value.");
+    }
+
+    /// <summary>
+    /// Unit test to verify that PostgreSQL connection string contains Database parameter.
+    /// </summary>
+    [TestMethod]
+    public void ConnectionString_PostgresqlType_ContainsDatabase()
+    {
+        // Arrange (Given)
+        var connectionString = new DataConnecionString(DataConnectionStringType.PostgreSQL)
+        {
+            ServerName = "localhost",
+            DatabaseSource = "weatherdb",
+            Username = "admin",
+            Password = "secret",
+        };
+
+        // Act (When)
+        string result = connectionString.ConnectionString;
+
+        // Assert (Then)
+        Assert.Contains(
+            "Database=weatherdb",
+            result,
+            "PostgreSQL connection string should contain Database parameter with DatabaseSource value.");
+    }
+
+    /// <summary>
+    /// Unit test to verify that PostgreSQL connection string contains Username parameter.
+    /// </summary>
+    [TestMethod]
+    public void ConnectionString_PostgresqlType_ContainsUsername()
+    {
+        // Arrange (Given)
+        var connectionString = new DataConnecionString(DataConnectionStringType.PostgreSQL)
+        {
+            ServerName = "localhost",
+            DatabaseSource = "mydb",
+            Username = "roadbed_user",
+            Password = "secret",
+        };
+
+        // Act (When)
+        string result = connectionString.ConnectionString;
+
+        // Assert (Then)
+        Assert.Contains(
+            "Username=roadbed_user",
+            result,
+            "PostgreSQL connection string should contain Username parameter.");
+    }
+
+    /// <summary>
+    /// Unit test to verify that PostgreSQL connection string contains Password parameter.
+    /// </summary>
+    [TestMethod]
+    public void ConnectionString_PostgresqlType_ContainsPassword()
+    {
+        // Arrange (Given)
+        var connectionString = new DataConnecionString(DataConnectionStringType.PostgreSQL)
+        {
+            ServerName = "localhost",
+            DatabaseSource = "mydb",
+            Username = "admin",
+            Password = "P@ssw0rd!",
+        };
+
+        // Act (When)
+        string result = connectionString.ConnectionString;
+
+        // Assert (Then)
+        Assert.Contains(
+            "Password=P@ssw0rd!",
+            result,
+            "PostgreSQL connection string should contain Password parameter.");
+    }
+
+    /// <summary>
+    /// Unit test to verify that PostgreSQL connection string contains Timeout parameter.
+    /// </summary>
+    [TestMethod]
+    public void ConnectionString_PostgresqlType_ContainsTimeout()
+    {
+        // Arrange (Given)
+        var connectionString = new DataConnecionString(DataConnectionStringType.PostgreSQL)
+        {
+            ServerName = "localhost",
+            DatabaseSource = "mydb",
+            Username = "admin",
+            Password = "secret",
+            TimeoutInSeconds = 45,
+        };
+
+        // Act (When)
+        string result = connectionString.ConnectionString;
+
+        // Assert (Then)
+        Assert.Contains(
+            "Timeout=45",
+            result,
+            "PostgreSQL connection string should contain Timeout parameter with TimeoutInSeconds value.");
+    }
+
+    /// <summary>
+    /// Unit test to verify that PostgreSQL connection string uses default timeout when not set.
+    /// </summary>
+    [TestMethod]
+    public void ConnectionString_PostgresqlTypeDefaultTimeout_ContainsDefaultTimeout()
+    {
+        // Arrange (Given)
+        var connectionString = new DataConnecionString(DataConnectionStringType.PostgreSQL)
+        {
+            ServerName = "localhost",
+            DatabaseSource = "mydb",
+            Username = "admin",
+            Password = "secret",
+        };
+
+        // Act (When)
+        string result = connectionString.ConnectionString;
+
+        // Assert (Then)
+        Assert.Contains(
+            "Timeout=20",
+            result,
+            "PostgreSQL connection string should contain default Timeout of 20 seconds.");
+    }
+
+    /// <summary>
+    /// Unit test to verify that PostgreSQL connection string handles null properties.
+    /// </summary>
+    [TestMethod]
+    public void ConnectionString_PostgresqlTypeNullProperties_GeneratesStringWithNulls()
+    {
+        // Arrange (Given)
+        var connectionString = new DataConnecionString(DataConnectionStringType.PostgreSQL);
+
+        // Act (When)
+        string result = connectionString.ConnectionString;
+
+        // Assert (Then)
+        Assert.Contains(
+            "Host=",
+            result,
+            "PostgreSQL connection string should contain Host parameter even when ServerName is null.");
+        Assert.Contains(
+            "Database=",
+            result,
+            "PostgreSQL connection string should contain Database parameter even when DatabaseSource is null.");
+    }
+
+    /// <summary>
+    /// Unit test to verify that PostgreSQL type with original string returns original string.
+    /// </summary>
+    [TestMethod]
+    public void ConnectionString_PostgresqlTypeWithOriginalString_ReturnsOriginalString()
+    {
+        // Arrange (Given)
+        string originalString = "Host=custom.server.com;Port=5433;Database=proddb;Username=app;Password=secret;Timeout=30";
+        var connectionString = new DataConnecionString(
+            DataConnectionStringType.PostgreSQL,
+            originalString);
+
+        // Act (When)
+        string result = connectionString.ConnectionString;
+
+        // Assert (Then)
+        Assert.AreEqual(
+            originalString,
+            result,
+            "ConnectionString should return the original string when provided, bypassing the template.");
+    }
+
+    /// <summary>
+    /// Unit test to verify that PostgreSQL connection string can be accessed multiple times consistently.
+    /// </summary>
+    [TestMethod]
+    public void ConnectionString_PostgresqlTypeAccessMultipleTimes_ReturnsConsistentValue()
+    {
+        // Arrange (Given)
+        var connectionString = new DataConnecionString(DataConnectionStringType.PostgreSQL)
+        {
+            ServerName = "localhost",
+            DatabaseSource = "mydb",
+            Username = "admin",
+            Password = "secret",
+        };
+
+        // Act (When)
+        string result1 = connectionString.ConnectionString;
+        string result2 = connectionString.ConnectionString;
+
+        // Assert (Then)
+        Assert.AreEqual(
+            result1,
+            result2,
+            "PostgreSQL ConnectionString should return consistent value on multiple accesses.");
+    }
+
+    /// <summary>
+    /// Unit test to verify that PostgreSQL empty original string falls through to template.
+    /// </summary>
+    [TestMethod]
+    public void Constructor_PostgresqlTypeEmptyConnectionString_UsesTemplate()
+    {
+        // Arrange (Given)
+        var connectionString = new DataConnecionString(DataConnectionStringType.PostgreSQL, string.Empty)
+        {
+            ServerName = "localhost",
+            DatabaseSource = "mydb",
+            Username = "admin",
+            Password = "secret",
+        };
+
+        // Act (When)
+        string result = connectionString.ConnectionString;
+
+        // Assert (Then)
+        Assert.Contains(
+            "Host=localhost",
+            result,
+            "PostgreSQL connection string should use template when empty original string is provided.");
     }
 
     /// <summary>

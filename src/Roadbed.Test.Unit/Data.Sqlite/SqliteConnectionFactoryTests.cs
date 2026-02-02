@@ -30,7 +30,7 @@ public class SqliteConnectionFactoryTests
     public void Constructor_WithConnectionString_InitializesProperties()
     {
         // Arrange (Given)
-        var connectionString = new DataConnecionString(DataConnectionStringType.SqliteInMemory);
+        var connectionString = new DataConnecionString(DataConnectionStringType.SQLiteInMemory);
 
         // Act (When)
         var instance = new SqliteConnectionFactory(connectionString);
@@ -81,7 +81,7 @@ public class SqliteConnectionFactoryTests
     public void Constructor_WithFileBased_SqliteConnectionString_InitializesCorrectly()
     {
         // Arrange (Given)
-        var connectionString = new DataConnecionString(DataConnectionStringType.Sqlite)
+        var connectionString = new DataConnecionString(DataConnectionStringType.SQLite)
         {
             DatabaseSource = "test.db",
             TimeoutInSeconds = 30,
@@ -99,7 +99,7 @@ public class SqliteConnectionFactoryTests
             instance.Connecion,
             "Connecion property should reference the connection string object.");
         Assert.AreEqual(
-            DataConnectionStringType.Sqlite,
+            DataConnectionStringType.SQLite,
             instance.Connecion.ConnectionStringType,
             "Connection string type should be Sqlite.");
     }
@@ -111,7 +111,7 @@ public class SqliteConnectionFactoryTests
     public void Constructor_WithInMemorySqliteConnectionString_InitializesCorrectly()
     {
         // Arrange (Given)
-        var connectionString = new DataConnecionString(DataConnectionStringType.SqliteInMemory);
+        var connectionString = new DataConnecionString(DataConnectionStringType.SQLiteInMemory);
 
         // Act (When)
         var instance = new SqliteConnectionFactory(connectionString);
@@ -125,7 +125,7 @@ public class SqliteConnectionFactoryTests
             instance.Connecion,
             "Connecion property should reference the connection string object.");
         Assert.AreEqual(
-            DataConnectionStringType.SqliteInMemory,
+            DataConnectionStringType.SQLiteInMemory,
             instance.Connecion.ConnectionStringType,
             "Connection string type should be SqliteInMemory.");
     }
@@ -139,7 +139,7 @@ public class SqliteConnectionFactoryTests
         // Arrange (Given)
         string customConnectionString = "Data Source=custom.db;Mode=ReadWrite";
         var connectionString = new DataConnecionString(
-            DataConnectionStringType.Sqlite,
+            DataConnectionStringType.SQLite,
             customConnectionString);
 
         // Act (When)
@@ -170,7 +170,7 @@ public class SqliteConnectionFactoryTests
     public void Connecion_Get_ReturnsConnectionString()
     {
         // Arrange (Given)
-        var connectionString = new DataConnecionString(DataConnectionStringType.SqliteInMemory);
+        var connectionString = new DataConnecionString(DataConnectionStringType.SQLiteInMemory);
         var instance = new SqliteConnectionFactory(connectionString);
 
         // Act (When)
@@ -193,7 +193,7 @@ public class SqliteConnectionFactoryTests
     public void Connecion_Init_IsReadOnlyAfterConstruction()
     {
         // Arrange (Given)
-        var connectionString = new DataConnecionString(DataConnectionStringType.SqliteInMemory);
+        var connectionString = new DataConnecionString(DataConnectionStringType.SQLiteInMemory);
         var instance = new SqliteConnectionFactory(connectionString);
 
         // Act (When)
@@ -219,7 +219,7 @@ public class SqliteConnectionFactoryTests
         // Arrange (Given)
         string uniqueConnectionString = $"Data Source=TestDb_{Guid.NewGuid():N};Mode=Memory;Cache=Shared";
         var connectionString = new DataConnecionString(
-            DataConnectionStringType.SqliteInMemory,
+            DataConnectionStringType.SQLiteInMemory,
             uniqueConnectionString);
         var instance = new SqliteConnectionFactory(connectionString);
 
@@ -253,7 +253,7 @@ public class SqliteConnectionFactoryTests
         // Arrange (Given)
         string uniqueConnectionString = $"Data Source=TestDb_{Guid.NewGuid():N};Mode=Memory;Cache=Shared";
         var connectionString = new DataConnecionString(
-            DataConnectionStringType.SqliteInMemory,
+            DataConnectionStringType.SQLiteInMemory,
             uniqueConnectionString);
         var instance = new SqliteConnectionFactory(connectionString);
 
@@ -285,7 +285,7 @@ public class SqliteConnectionFactoryTests
         // Use unique in-memory database name to avoid conflicts
         string uniqueConnectionString = $"Data Source=TestDb_{Guid.NewGuid():N};Mode=Memory;Cache=Shared";
         var connectionString = new DataConnecionString(
-            DataConnectionStringType.SqliteInMemory,
+            DataConnectionStringType.SQLiteInMemory,
             uniqueConnectionString);
         var instance = new SqliteConnectionFactory(connectionString);
 
@@ -330,7 +330,7 @@ public class SqliteConnectionFactoryTests
         // Arrange (Given)
         string uniqueConnectionString = $"Data Source=TestDb_{Guid.NewGuid():N};Mode=Memory;Cache=Shared";
         var connectionString = new DataConnecionString(
-            DataConnectionStringType.SqliteInMemory,
+            DataConnectionStringType.SQLiteInMemory,
             uniqueConnectionString);
         var instance = new SqliteConnectionFactory(connectionString);
 
@@ -370,7 +370,7 @@ public class SqliteConnectionFactoryTests
     {
         // Arrange (Given)
         var connectionString = new DataConnecionString(
-            DataConnectionStringType.Sqlite,
+            DataConnectionStringType.SQLite,
             "Data Source=/invalid/path/that/does/not/exist/database.db;Mode=ReadOnly");
         var instance = new SqliteConnectionFactory(connectionString);
         bool exceptionThrown = false;
@@ -406,7 +406,7 @@ public class SqliteConnectionFactoryTests
         // Arrange (Given)
         string uniqueConnectionString = $"Data Source=TestDb_{Guid.NewGuid():N};Mode=Memory;Cache=Shared";
         var connectionString = new DataConnecionString(
-            DataConnectionStringType.SqliteInMemory,
+            DataConnectionStringType.SQLiteInMemory,
             uniqueConnectionString);
         var instance = new SqliteConnectionFactory(connectionString);
 
@@ -441,7 +441,7 @@ public class SqliteConnectionFactoryTests
         // Arrange (Given)
         string uniqueConnectionString = $"Data Source=TestDb_{Guid.NewGuid():N};Mode=Memory;Cache=Shared";
         var connectionString = new DataConnecionString(
-            DataConnectionStringType.SqliteInMemory,
+            DataConnectionStringType.SQLiteInMemory,
             uniqueConnectionString);
         var instance = new SqliteConnectionFactory(connectionString);
 
@@ -473,7 +473,7 @@ public class SqliteConnectionFactoryTests
         // Arrange (Given)
         string uniqueConnectionString = $"Data Source=TestDb_{Guid.NewGuid():N};Mode=Memory;Cache=Shared";
         var connectionString = new DataConnecionString(
-            DataConnectionStringType.SqliteInMemory,
+            DataConnectionStringType.SQLiteInMemory,
             uniqueConnectionString);
         var instance = new SqliteConnectionFactory(connectionString);
 
@@ -519,7 +519,7 @@ public class SqliteConnectionFactoryTests
         // Arrange (Given)
         string uniqueConnectionString = $"Data Source=TestDb_{Guid.NewGuid():N};Mode=Memory;Cache=Shared";
         var connectionString = new DataConnecionString(
-            DataConnectionStringType.SqliteInMemory,
+            DataConnectionStringType.SQLiteInMemory,
             uniqueConnectionString);
         var instance = new SqliteConnectionFactory(connectionString);
 
@@ -560,7 +560,7 @@ public class SqliteConnectionFactoryTests
     {
         // Arrange (Given)
         var connectionString = new DataConnecionString(
-            DataConnectionStringType.Sqlite,
+            DataConnectionStringType.SQLite,
             "Data Source=/invalid/path/that/does/not/exist/database.db;Mode=ReadOnly");
         var instance = new SqliteConnectionFactory(connectionString);
         bool exceptionThrown = false;
@@ -595,7 +595,7 @@ public class SqliteConnectionFactoryTests
         // Arrange (Given)
         string uniqueConnectionString = $"Data Source=TestDb_{Guid.NewGuid():N};Mode=Memory;Cache=Shared";
         var connectionString = new DataConnecionString(
-            DataConnectionStringType.SqliteInMemory,
+            DataConnectionStringType.SQLiteInMemory,
             uniqueConnectionString);
 
         // Act (When)
@@ -620,7 +620,7 @@ public class SqliteConnectionFactoryTests
         // Arrange (Given)
         string uniqueConnectionString = $"Data Source=TestDb_{Guid.NewGuid():N};Mode=Memory;Cache=Shared";
         var connectionString = new DataConnecionString(
-            DataConnectionStringType.SqliteInMemory,
+            DataConnectionStringType.SQLiteInMemory,
             uniqueConnectionString);
         IDataConnectionFactory instance = new SqliteConnectionFactory(connectionString);
 
@@ -655,7 +655,7 @@ public class SqliteConnectionFactoryTests
         // Arrange (Given)
         string uniqueConnectionString = $"Data Source=TestDb_{Guid.NewGuid():N};Mode=Memory;Cache=Shared";
         var connectionString = new DataConnecionString(
-            DataConnectionStringType.SqliteInMemory,
+            DataConnectionStringType.SQLiteInMemory,
             uniqueConnectionString);
         IDataConnectionFactory instance = new SqliteConnectionFactory(connectionString);
 

@@ -122,13 +122,17 @@ public class DataConnecionString
 
         if (string.IsNullOrEmpty(this.originalConnectionString))
         {
-            if (this.ConnectionStringType == DataConnectionStringType.Sqlite)
+            if (this.ConnectionStringType == DataConnectionStringType.SQLite)
             {
                 result = this.CreateConnectionStringForSqlite();
             }
-            else if (this.ConnectionStringType == DataConnectionStringType.SqliteInMemory)
+            else if (this.ConnectionStringType == DataConnectionStringType.SQLiteInMemory)
             {
                 result = this.CreateConnectionStringForSqliteInMemory();
+            }
+            else if (this.ConnectionStringType == DataConnectionStringType.PostgreSQL)
+            {
+                result = this.CreateConnectionStringForPostgresql();
             }
         }
         else
@@ -150,6 +154,23 @@ public class DataConnecionString
             Foreign Keys=true;
             Pooling=true;
             Default Timeout={{this.TimeoutInSeconds}};
+            """;
+
+        return template;
+    }
+
+    /// <summary>
+    /// Creates a connection string for a PostgreSQL database.
+    /// </summary>
+    /// <returns>Connection string used to access a database.</returns>
+    private string CreateConnectionStringForPostgresql()
+    {
+        string template = $$"""
+            Host={{this.ServerName}};
+            Database={{this.DatabaseSource}};
+            Username={{this.Username}};
+            Password={{this.Password}};
+            Timeout={{this.TimeoutInSeconds}};
             """;
 
         return template;

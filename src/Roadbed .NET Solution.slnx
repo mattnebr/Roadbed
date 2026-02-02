@@ -10,6 +10,7 @@
   <Project Path="Roadbed.Common/Roadbed.Common.csproj" />
   <Project Path="Roadbed.Crud/Roadbed.Crud.csproj" Id="46bc9dfb-a8a2-4e36-a782-40a22e35615e" />
   <Project Path="Roadbed.Data.Dapper/Roadbed.Data.Dapper.csproj" Id="cdc733ab-5f62-4352-a6b0-fb355411621a" />
+  <Project Path="Roadbed.Data.Postgresql/Roadbed.Data.Postgresql.csproj" Id="ba095d52-38b3-4883-97a1-9a8064c1c47c" />
   <Project Path="Roadbed.Data.Sqlite/Roadbed.Data.Sqlite.csproj" Id="02f4a9f7-1704-4daa-906a-2dbecce7074c" />
   <Project Path="Roadbed.Data/Roadbed.Data.csproj" Id="d44e4793-96f5-4e70-af87-563fe5e59fcd" />
   <Project Path="Roadbed.IO/Roadbed.IO.csproj" Id="47cdeba4-d3b1-4656-95e7-4d7760daecdf" />

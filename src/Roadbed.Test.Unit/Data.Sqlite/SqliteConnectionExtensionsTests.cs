@@ -97,7 +97,7 @@ public class SqliteConnectionExtensionsTests
     {
         // Arrange (Given)
         var connectionString = new DataConnecionString(
-            DataConnectionStringType.SqliteInMemory,
+            DataConnectionStringType.SQLiteInMemory,
             $"Data Source=TestDb_{Guid.NewGuid():N};Mode=Memory;Cache=Shared");
         var connection = new SqliteConnection(connectionString.ConnectionString);
 
@@ -365,7 +365,7 @@ public class SqliteConnectionExtensionsTests
     private IDataConnectionFactory CreateConnectionFactory()
     {
         string uniqueDbName = $"TestDb_{Guid.NewGuid():N}";
-        var connectionString = new DataConnecionString(DataConnectionStringType.SqliteInMemory)
+        var connectionString = new DataConnecionString(DataConnectionStringType.SQLiteInMemory)
         {
             DatabaseSource = uniqueDbName,
         };

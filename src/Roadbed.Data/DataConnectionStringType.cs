@@ -13,10 +13,15 @@ public enum DataConnectionStringType
     /// <summary>
     /// SQLite Database Connection Type.
     /// </summary>
-    Sqlite = 1,
+    SQLite = 1,
 
     /// <summary>
     /// SQLite In-Memory Database Connection Type.
     /// </summary>
-    SqliteInMemory = 2,
+    SQLiteInMemory = 2,
+
+    /// <summary>
+    /// PostgreSQL Database Connection Type.
+    /// </summary>
+    PostgreSQL = 3,
 }

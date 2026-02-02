@@ -2,7 +2,7 @@
 
 Dapper configuration utilities for SQLite databases, providing column-to-property mapping via `[Column]` attributes and type handlers for DateTime/DateTimeOffset conversion.
 
-For the full type catalog, type handler internals, and integration with Roadbed.Crud, see the [Architecture Document](https://claude.ai/chat/docs/architecture.md).
+For the full type catalog, type handler internals, and integration with Roadbed.Crud, see the [Architecture Document](/docs/architectural-design/architecture-roadbed-dapper.md).
 
 ## Installation
 

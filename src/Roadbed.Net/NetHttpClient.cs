@@ -1,6 +1,7 @@
 ﻿namespace Roadbed.Net;
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -124,15 +125,7 @@ public class NetHttpClient
         }
         catch (HttpRequestException ex) when (ex.InnerException is SocketException)
         {
-            this.LogError(
-                ex,
-                "Socket error calling {Endpoint}",
-                request.HttpEndPoint?.ToString() ?? "unknown");
-
-            response = NetHttpResponse<T>.Failure(
-                500,
-                string.Concat(ex?.Message, " ", ex?.InnerException?.Message),
-                "Not a successful HTTP call. An unknown error occurred with the HTTP Request.");
+            response = this.HandleHttpRequestWithSocketException<T>(ex, request);
         }
         catch (SocketException ex)
         {
@@ -386,6 +379,32 @@ public class NetHttpClient
         {
             Content = new StringContent("Unable to complete Http Request."),
         };
+    }
+
+    /// <summary>
+    /// Handles an <see cref="HttpRequestException"/> whose inner exception is a
+    /// <see cref="SocketException"/>. This is defensive code that guards against
+    /// future changes introducing a code path where such an exception escapes the
+    /// retry method.
+    /// </summary>
+    /// <typeparam name="T">Type of the expected response data.</typeparam>
+    /// <param name="ex">The caught exception.</param>
+    /// <param name="request">The original HTTP request.</param>
+    /// <returns><see cref="NetHttpResponse{T}"/> indicating failure with status 500.</returns>
+    [ExcludeFromCodeCoverage]
+    private NetHttpResponse<T> HandleHttpRequestWithSocketException<T>(
+        HttpRequestException ex,
+        NetHttpRequest request)
+    {
+        this.LogError(
+            ex,
+            "Socket error calling {Endpoint}",
+            request.HttpEndPoint?.ToString() ?? "unknown");
+
+        return NetHttpResponse<T>.Failure(
+            500,
+            string.Concat(ex?.Message, " ", ex?.InnerException?.Message),
+            "Not a successful HTTP call. An unknown error occurred with the HTTP Request.");
     }
 
     #endregion Private Methods

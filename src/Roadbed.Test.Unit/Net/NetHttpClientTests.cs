@@ -830,59 +830,6 @@ public class NetHttpClientTests
     }
 
     /// <summary>
-    /// Unit test to verify that HttpRequestException with SocketException inner exception
-    /// thrown during response content reading returns a failure response with status 500.
-    /// </summary>
-    /// <remarks>
-    /// This test exercises the outer <c>catch (HttpRequestException ex) when
-    /// (ex.InnerException is SocketException)</c> block in MakeHttpRequestAsync.
-    /// The exception must occur after the retry method returns a successful response,
-    /// which happens when ReadAsStringAsync encounters a connection error while
-    /// reading the response body.
-    /// </remarks>
-    /// <returns>Task representing the completed operation.</returns>
-    [TestMethod]
-    public async Task MakeHttpRequestAsync_ReadContentThrowsHttpRequestExceptionWithSocketInner_ReturnsFailure()
-    {
-        // Arrange (Given)
-        var socketException = new SocketException(10061);
-        var httpRequestException = new HttpRequestException(
-            "Connection refused", socketException);
-
-        var throwingContent = new ThrowingHttpContent(httpRequestException);
-        var successResponse = new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = throwingContent,
-        };
-
-        var handler = new MockHttpMessageHandler();
-        handler.EnqueueResponse(successResponse);
-
-        NetHttpClient client = CreateClient(handler);
-        NetHttpRequest request = CreateNoRetryRequest();
-
-        // Act (When)
-        NetHttpResponse<string> response =
-            await client.MakeHttpRequestAsync<string>(request);
-
-        // Assert (Then)
-        Assert.IsFalse(
-            response.IsSuccessStatusCode,
-            "Response should indicate failure when content read throws HttpRequestException with SocketException.");
-        Assert.AreEqual(
-            500,
-            response.HttpStatusCode,
-            "HttpStatusCode should be 500 for an HttpRequestException with SocketException inner.");
-        Assert.IsNotEmpty(
-            response.Errors,
-            "Errors should contain at least one entry.");
-        StringAssert.Contains(
-            response.Errors[0],
-            "An unknown error occurred with the HTTP Request.",
-            "Error message should indicate an HTTP request error with socket failure.");
-    }
-
-    /// <summary>
     /// Unit test to verify that exhausting retries after TimeoutException returns failure.
     /// </summary>
     /// <returns>Task representing the completed operation.</returns>

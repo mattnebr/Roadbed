@@ -18,15 +18,17 @@ Neither Evans nor Fowler described the combined pattern as a single named concep
 
 ### How the Layers Interact
 
-The pattern follows a strict top-down dependency flow. The application layer (a controller, a background job, a CLI tool) depends on the Service interface. The Service depends on the Repository interface. The Repository depends on the Entity and on whatever infrastructure it needs to persist or retrieve that Entity. No layer reaches upward or sideways.
+The pattern follows a strict top-down dependency flow. The application layer (a controller, a background job, a CLI tool) depends on the concrete Service class. The Service depends on the Repository interface. The Repository depends on the Entity and on whatever infrastructure it needs to persist or retrieve that Entity. No layer reaches upward or sideways.
 
 A typical request flows like this: the application calls a method on the Service, passing an Entity or an identifier. The Service applies any business rules, then delegates to the Repository. The Repository translates the call into a data store operation (a SQL query, an HTTP request, a file read) and returns the result. The Service may transform the result before returning it to the application.
 
-Dependency injection wires the layers together at startup. The application registers the concrete Repository and Service implementations against their interfaces, and the DI container resolves the chain automatically. This means the application layer never knows which concrete Repository or Service it is using, which makes it straightforward to swap implementations for testing or when the underlying data store changes.
+Both the Service interface and the Repository interface are `internal` to the class library. The consuming application never sees them. The concrete Service class is `public` and exposes two constructors: a `public` constructor that accepts only an `ILogger<T>` and resolves its repository dependency internally via `ServiceLocator`, and an `internal` constructor that accepts both the repository and the logger directly. Unit test projects use `InternalsVisibleTo` to access the internal constructor and inject mock repositories.
+
+This means the application layer never knows which concrete Repository the Service is using, and the internal wiring of the class library remains hidden. The consuming application only needs to provide a logger — the Service resolves its own infrastructure dependencies.
 
 ### Why It Works
 
-The pattern's durability comes from the fact that it solves several problems simultaneously. Testability improves because each layer can be tested in isolation by mocking the layer below it. A Service can be tested without a real database by substituting a mock Repository. Maintainability improves because changes to the data store are contained within the Repository — switching from SQL Server to SQLite, or from a database to a REST API, requires no changes to the Service or the application layer. Readability improves because developers know exactly where to look for business logic (the Service), data access (the Repository), and data shape (the Entity).
+The pattern's durability comes from the fact that it solves several problems simultaneously. Testability improves because each layer can be tested in isolation by mocking the layer below it. A Service can be tested without a real database by substituting a mock Repository through the internal constructor. Maintainability improves because changes to the data store are contained within the Repository — switching from SQL Server to SQLite, or from a database to a REST API, requires no changes to the Service or the application layer. Readability improves because developers know exactly where to look for business logic (the Service), data access (the Repository), and data shape (the Entity).
 
 The pattern also scales well with team size. In a large codebase, different developers can work on different layers without creating merge conflicts. One developer can build out the Repository while another defines the Service interface and writes tests against it using mocks.
 
@@ -48,7 +50,7 @@ The pattern is distinct from the Active Record pattern, where the Entity itself 
 
 This section walks through the recommended way to implement the Repository-Service Pattern using the Roadbed NuGet packages. Each sub-section builds on the previous one, following the same order you would use when scaffolding a new module from scratch: define the Entity first, then the Repository, then the Service, then the Installer that wires everything together.
 
-The [Roadbed.Crud Architecture Overview](https://claude.ai/docs/architectural-design/architecture-roadbed-crud.md) document provides an overview of the interfaces that are involved in our preferred framework.
+The [Roadbed.Crud Architecture Overview](/docs/architectural-design/architecture-roadbed-crud.md) document provides an overview of the interfaces that are involved in our preferred framework.
 
 ---
 
@@ -59,7 +61,6 @@ Every module begins with the Entity. In Roadbed.Crud, the entity layer is anchor
 #### IEntity\<TId\>
 
 The `IEntity<TId>` interface is the root contract for all entities in the Roadbed ecosystem. It declares a single property:
-
 ```csharp
 namespace Roadbed.Crud;
 
@@ -78,7 +79,6 @@ Every Roadbed.Crud repository and service is generic over `TEntity` and `TId`, w
 Roadbed.Crud provides two abstract base types that implement `IEntity<TId>`. The choice between them is not a matter of preference — it is determined by the data source and the mutability requirements of the entity.
 
 **`BaseEntityRecord<TId>`** is an abstract record type. Records provide value-based equality, structural immutability, and concise syntax. Use this base for entities that represent data received from external APIs, configuration objects, or any data that should not be mutated after creation.
-
 ```csharp
 namespace Roadbed.Crud;
 
@@ -89,7 +89,6 @@ public abstract record BaseEntityRecord<TId> : IEntity<TId>
 ```
 
 **`BaseEntityClass<TId>`** is an abstract class type. Classes provide reference-based identity and fully mutable state. Use this base for entities that are mapped to database tables via Dapper, managed by an ORM, or require complex inheritance hierarchies.
-
 ```csharp
 namespace Roadbed.Crud;
 
@@ -101,10 +100,9 @@ public abstract class BaseEntityClass<TId> : IEntity<TId>
 
 Both bases declare `Id` as `virtual` so that concrete entities can override it with additional attributes such as `[JsonProperty]` or `[Column]`.
 
-The [Roadbed.Crud Architecture Overview](https://claude.ai/docs/architectural-design/architecture-roadbed-crud.md) document includes guidance on how you should choose between the two options.
+The [Roadbed.Crud Architecture Overview](/docs/architectural-design/architecture-roadbed-crud.md) document includes guidance on how you should choose between the two options.
 
 #### Entity Implementation Example
-
 ```csharp
 namespace MySolution.Sdk.MyProject;
 
@@ -151,7 +149,6 @@ Key characteristics of this entity:
 #### Dapper Mapping
 
 When the module installer registers Dapper column mappings, it needs to know which types in the assembly are database entities. Rather than maintaining a manual list of types, the recommended approach is to scan the assembly for all concrete classes that implement `IEntity<>`:
-
 ```csharp
 Type[] entityTypes = typeof(CustomEntity).Assembly
     .GetTypes()
@@ -171,9 +168,9 @@ This pattern uses a well-known anchor type to locate the assembly, filters to co
 
 ### Services
 
-The Service is the public face of a module. It is the only layer that the application (a controller, a background job, a CLI tool) depends on directly. Both the Service interface and the Service implementation are `public` — the interface defines the contract and the implementation is registered with the DI container. Repository implementations, by contrast, are `internal` — the application layer never interacts with them directly.
+The Service is the public face of a module. It is the only layer that the application (a controller, a background job, a CLI tool) depends on directly. The concrete Service class is `public`, but both the Service interface and the Repository interface are `internal` — the consuming application never interacts with them directly. The application should not be aware of the internal workings of the class library.
 
-In Roadbed.Crud, services sit on top of repositories and serve two purposes. First, they provide a pass-through to the repository for standard CRUDL operations so the application layer does not need to know about the repository at all. Second, they provide a place to add business logic — validation, transformation, orchestration, caching — by overriding individual methods. The base class methods are `virtual`, not `abstract`, which means a service with no business logic requires zero overrides. It works immediately with nothing more than a constructor.
+In Roadbed.Crud, services sit on top of repositories and serve two purposes. First, they provide a pass-through to the repository for standard CRUDL operations so the application layer does not need to know about the repository at all. Second, they provide a place to add business logic — validation, transformation, orchestration, caching — by overriding individual methods. The base class methods are `virtual`, not `abstract`, which means a service with no business logic requires zero overrides. It works immediately with nothing more than its constructors.
 
 Services also provide two composed operations that repositories do not have: **Exists** and **Upsert**. These are built from repository primitives automatically. Exists calls Read and checks whether the result is not null. Upsert calls Exists to decide whether to delegate to Create or Update. Both can be overridden when the data source supports more efficient implementations.
 
@@ -193,8 +190,7 @@ The service composite always includes Exists and Upsert when it includes CRUD op
 
 #### Defining the Service Interface
 
-The service interface is `public` and inherits from the matching Roadbed.Crud service composite. It declares no members of its own unless the module needs custom operations beyond what the composite provides.
-
+The service interface is `internal` and inherits from the matching Roadbed.Crud service composite. It declares no members of its own unless the module needs custom operations beyond what the composite provides. Making the interface `internal` ensures the consuming application has no visibility into the class library's internal contracts — it depends only on the concrete service class.
 ```csharp
 namespace MySolution.Sdk.MyProject;
 
@@ -203,21 +199,20 @@ using Roadbed.Crud.Services.Async;
 /// <summary>
 /// Service interface for custom entity operations.
 /// </summary>
-public interface ICustomEntityService
+internal interface ICustomEntityService
     : IAsyncCrudlService<CustomEntity, long>
 {
 }
 ```
 
-This single declaration gives consumers access to all seven operations — Create, Read, Update, Delete, List, Exists, and Upsert — through the inherited interface members.
+This single declaration gives the service layer access to all seven operations — Create, Read, Update, Delete, List, Exists, and Upsert — through the inherited interface members.
 
 When a module needs operations beyond the standard CRUDL set, declare them directly on the service interface:
-
 ```csharp
 /// <summary>
 /// Service interface for custom entity operations.
 /// </summary>
-public interface ICustomEntityService
+internal interface ICustomEntityService
     : IAsyncCrudlService<CustomEntity, long>
 {
     /// <summary>
@@ -236,17 +231,25 @@ Custom methods follow the same conventions as the built-in operations: `Cancella
 
 #### Implementing the Service
 
-The service implementation is `public sealed` and inherits from two types: the matching Roadbed.Crud service base class and the module's service interface. The base class provides the virtual pass-through implementations. The interface satisfies the DI contract.
+The service implementation is `public sealed` and inherits from two types: the matching Roadbed.Crud service base class and the module's service interface. The base class provides the virtual pass-through implementations. The interface satisfies the internal contract used for dependency injection within the class library and for unit testing.
+
+##### The Dual Constructor Pattern
+
+Every concrete service class exposes two constructors:
+
+- **A `public` constructor** that accepts only `ILogger<T>`. This is the constructor the consuming application uses. It resolves the repository dependency internally via `ServiceLocator.GetService<T>()`, keeping the application unaware of the class library's internal interfaces and wiring.
+- **An `internal` constructor** that accepts both the repository interface and `ILogger<T>` directly. This is the constructor unit test projects use via `InternalsVisibleTo` to inject mock repositories. It also supports dependency injection within the class library itself.
+
+This separation ensures the consuming application only needs to provide a logger, while unit tests retain full control over all dependencies.
 
 ##### The Zero-Override Service
 
-The most common case is a service that adds no business logic. It simply delegates every operation to the repository through the base class. This requires nothing beyond a constructor:
-
+The most common case is a service that adds no business logic. It simply delegates every operation to the repository through the base class. This requires nothing beyond the dual constructors:
 ```csharp
 namespace MySolution.Sdk.MyProject;
 
 using Microsoft.Extensions.Logging;
-using Roadbed.Crud.Repositories.Async;
+using Roadbed;
 using Roadbed.Crud.Services.Async;
 
 /// <summary>
@@ -261,32 +264,59 @@ public sealed class CustomEntityService
     /// <summary>
     /// Initializes a new instance of the <see cref="CustomEntityService"/> class.
     /// </summary>
-    /// <param name="repository">Repository for custom entity data access.</param>
     /// <param name="logger">Represents a type used to perform logging.</param>
     public CustomEntityService(
-        IAsyncCrudlRepository<CustomEntity, long> repository,
+        ILogger<CustomEntityService> logger)
+        : base(
+            ServiceLocator.GetService<ICustomEntityRepository>(),
+            logger)
+    {
+    }
+
+    #endregion Public Constructors
+
+    #region Internal Constructors
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CustomEntityService"/> class.
+    /// </summary>
+    /// <param name="repository">Repository for custom entity data access.</param>
+    /// <param name="logger">Represents a type used to perform logging.</param>
+    internal CustomEntityService(
+        ICustomEntityRepository repository,
         ILogger<CustomEntityService> logger)
         : base(repository, logger)
     {
     }
 
-    #endregion Public Constructors
+    #endregion Internal Constructors
 }
 ```
 
 With this implementation, all seven operations work immediately. Create, Read, Update, Delete, and List delegate to the repository. Exists composes from Read. Upsert composes from Exists, Create, and Update. There is no code to write and no methods to override.
 
-Key characteristics of the constructor:
+Key characteristics of the constructors:
 
-- **The repository parameter type is `IAsyncCrudlRepository<CustomEntity, long>`**, the generic Roadbed.Crud composite interface — not the module's custom repository interface (e.g., `ICustomEntityRepository`). This is intentional. The service base class declares its constructor parameter as the generic composite, and the DI container resolves it to the concrete repository because the custom repository interface inherits from the composite.
+- **The public constructor accepts only `ILogger<CustomEntityService>`.** The consuming application provides a logger and nothing else. The repository is resolved internally via `ServiceLocator.GetService<ICustomEntityRepository>()`, which retrieves the registered implementation from the DI container. This keeps the internal repository interface hidden from the application layer.
+- **The internal constructor accepts `ICustomEntityRepository` and `ILogger<CustomEntityService>`.** Unit test projects access this constructor via `InternalsVisibleTo` and pass a mock repository directly, enabling isolated testing without `ServiceLocator` or a real DI container.
+- **The repository parameter type is `ICustomEntityRepository`**, the module's custom repository interface — not the generic Roadbed.Crud composite (e.g., `IAsyncCrudlRepository<CustomEntity, long>`). This is intentional. The custom repository interface inherits from the generic composite, so passing it to `base(repository, logger)` satisfies the base class constructor. Using the custom interface in `ServiceLocator.GetService<T>()` ensures the correct DI registration is resolved.
 - **The logger parameter type is `ILogger<CustomEntityService>`**, not `ILoggerFactory`. Service base classes inherit from `BaseClassWithLogging`, which takes `ILogger`. Only use `ILoggerFactory` when the class genuinely needs to create loggers for other categories.
-- **No null validation is needed in the constructor body.** The base class constructor (`BaseAsyncCrudlService`) validates the repository parameter with `ArgumentNullException.ThrowIfNull()` and the `BaseClassWithLogging` constructor handles the logger. The concrete service constructor only needs to call `base(repository, logger)`.
+- **No null validation is needed in the constructor body.** The base class constructor (`BaseAsyncCrudlService`) validates the repository parameter with `ArgumentNullException.ThrowIfNull()` and the `BaseClassWithLogging` constructor handles the logger. The concrete service constructors only need to call `base(...)`.
+- **`using Roadbed;`** is required for access to `ServiceLocator`.
 
 ##### Adding Business Logic via Overrides
 
 When a service needs to enforce business rules, add logging, apply transformations, or perform validation, override the specific method and call `base` to delegate to the repository:
-
 ```csharp
+namespace MySolution.Sdk.MyProject;
+
+using Microsoft.Extensions.Logging;
+using Roadbed;
+using Roadbed.Crud.Services.Async;
+
+/// <summary>
+/// Service implementation for custom entity operations.
+/// </summary>
 public sealed class CustomEntityService
     : BaseAsyncCrudlService<CustomEntity, long>,
       ICustomEntityService
@@ -296,16 +326,32 @@ public sealed class CustomEntityService
     /// <summary>
     /// Initializes a new instance of the <see cref="CustomEntityService"/> class.
     /// </summary>
-    /// <param name="repository">Repository for custom entity data access.</param>
     /// <param name="logger">Represents a type used to perform logging.</param>
     public CustomEntityService(
-        IAsyncCrudlRepository<CustomEntity, long> repository,
+        ILogger<CustomEntityService> logger)
+        : base(
+            ServiceLocator.GetService<ICustomEntityRepository>(),
+            logger)
+    {
+    }
+
+    #endregion Public Constructors
+
+    #region Internal Constructors
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CustomEntityService"/> class.
+    /// </summary>
+    /// <param name="repository">Repository for custom entity data access.</param>
+    /// <param name="logger">Represents a type used to perform logging.</param>
+    internal CustomEntityService(
+        ICustomEntityRepository repository,
         ILogger<CustomEntityService> logger)
         : base(repository, logger)
     {
     }
 
-    #endregion Public Constructors
+    #endregion Internal Constructors
 
     #region Public Methods
 
@@ -354,7 +400,6 @@ Note the use of `this.LogInformation()` and `this.ExistsAsync()`. Because the se
 Exists and Upsert are service-level operations that do not exist on the repository interface. They are composed from repository primitives inside the service base class.
 
 **Exists** calls the repository's `ReadAsync` and checks whether the result is not null:
-
 ```csharp
 public virtual async Task<bool> ExistsAsync(
     TId id,
@@ -368,7 +413,6 @@ public virtual async Task<bool> ExistsAsync(
 This is why the Roadbed.Crud convention requires `ReadAsync` to return `null` for missing entities rather than throwing an exception. If Read threw a `NotFoundException`, the composed Exists would need exception-driven control flow, which is both slower and harder to reason about.
 
 **Upsert** calls Exists to decide between Create and Update:
-
 ```csharp
 public virtual async Task<TEntity> UpsertAsync(
     TEntity entity,
@@ -389,7 +433,6 @@ public virtual async Task<TEntity> UpsertAsync(
 The logic follows three branches: when the entity's Id is null, Create is called because there is no identifier to check. When the Id is not null and Exists returns true, Update is called. When the Id is not null and Exists returns false, Create is called because the entity has an Id but does not yet exist in the data store.
 
 Both methods are `virtual` and can be overridden. The most common reason to override Upsert is when the data source supports a native upsert operation (SQL Server's `MERGE`, PostgreSQL's `ON CONFLICT`, or SQLite's `INSERT OR REPLACE`). In that case, overriding Upsert to call the repository directly with a single native query eliminates the two-step Exists-then-Create/Update round trip:
-
 ```csharp
 public override async Task<CustomEntity> UpsertAsync(
     CustomEntity entity,
@@ -407,7 +450,6 @@ public override async Task<CustomEntity> UpsertAsync(
 #### The Protected Repository Property
 
 The service base class exposes the repository through a `protected` property:
-
 ```csharp
 protected IAsyncCrudlRepository<TEntity, TId> Repository => this._repository;
 ```
@@ -419,22 +461,51 @@ The distinction matters: calling `base.CreateAsync()` invokes the base class vir
 #### Custom Service Methods
 
 When the service interface declares custom methods beyond the CRUDL composite, implement them in the service class directly. These methods typically call the protected `Repository` property or coordinate between multiple operations:
-
 ```csharp
+namespace MySolution.Sdk.MyProject;
+
+using Microsoft.Extensions.Logging;
+using Roadbed;
+using Roadbed.Crud.Services.Async;
+
+/// <summary>
+/// Service implementation for custom entity operations.
+/// </summary>
 public sealed class CustomEntityService
     : BaseAsyncCrudlService<CustomEntity, long>,
       ICustomEntityService
 {
     #region Public Constructors
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CustomEntityService"/> class.
+    /// </summary>
+    /// <param name="logger">Represents a type used to perform logging.</param>
     public CustomEntityService(
-        IAsyncCrudlRepository<CustomEntity, long> repository,
+        ILogger<CustomEntityService> logger)
+        : base(
+            ServiceLocator.GetService<ICustomEntityRepository>(),
+            logger)
+    {
+    }
+
+    #endregion Public Constructors
+
+    #region Internal Constructors
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CustomEntityService"/> class.
+    /// </summary>
+    /// <param name="repository">Repository for custom entity data access.</param>
+    /// <param name="logger">Represents a type used to perform logging.</param>
+    internal CustomEntityService(
+        ICustomEntityRepository repository,
         ILogger<CustomEntityService> logger)
         : base(repository, logger)
     {
     }
 
-    #endregion Public Constructors
+    #endregion Internal Constructors
 
     #region Public Methods
 
@@ -462,16 +533,47 @@ public sealed class CustomEntityService
 }
 ```
 
-If the custom method requires a query that the standard repository composite does not expose (for example, a filtered database query instead of an in-memory filter), the repository interface should declare the custom method (Level 3 consumption in the Roadbed.Crud decision tree), and the service should access it through a separate field. The protected `Repository` property is typed as the generic Roadbed.Crud composite and does not have access to custom repository methods. In this scenario, inject the custom repository interface alongside the base class parameter:
-
+If the custom method requires a query that the standard repository composite does not expose (for example, a filtered database query instead of an in-memory filter), the repository interface should declare the custom method (Level 3 consumption in the Roadbed.Crud decision tree), and the service should access it through a separate field. The protected `Repository` property is typed as the generic Roadbed.Crud composite and does not have access to custom repository methods. In this scenario, store a typed reference to the custom repository interface alongside the base class parameter:
 ```csharp
+namespace MySolution.Sdk.MyProject;
+
+using Microsoft.Extensions.Logging;
+using Roadbed;
+using Roadbed.Crud.Services.Async;
+
+/// <summary>
+/// Service implementation for custom entity operations.
+/// </summary>
 public sealed class CustomEntityService
     : BaseAsyncCrudlService<CustomEntity, long>,
       ICustomEntityService
 {
     private readonly ICustomEntityRepository _customRepository;
 
+    #region Public Constructors
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CustomEntityService"/> class.
+    /// </summary>
+    /// <param name="logger">Represents a type used to perform logging.</param>
     public CustomEntityService(
+        ILogger<CustomEntityService> logger)
+        : this(
+            ServiceLocator.GetService<ICustomEntityRepository>(),
+            logger)
+    {
+    }
+
+    #endregion Public Constructors
+
+    #region Internal Constructors
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CustomEntityService"/> class.
+    /// </summary>
+    /// <param name="repository">Repository for custom entity data access.</param>
+    /// <param name="logger">Represents a type used to perform logging.</param>
+    internal CustomEntityService(
         ICustomEntityRepository repository,
         ILogger<CustomEntityService> logger)
         : base(repository, logger)
@@ -479,6 +581,11 @@ public sealed class CustomEntityService
         this._customRepository = repository;
     }
 
+    #endregion Internal Constructors
+
+    #region Public Methods
+
+    /// <inheritdoc/>
     public async Task<IList<CustomEntity>> ListByDateRangeAsync(
         CustomRangeRequest range,
         CancellationToken cancellationToken = default)
@@ -487,15 +594,18 @@ public sealed class CustomEntityService
             range,
             cancellationToken);
     }
+
+    #endregion Public Methods
 }
 ```
 
 This works because `ICustomEntityRepository` inherits from `IAsyncCrudlRepository<CustomEntity, long>`, so passing it to `base(repository, logger)` satisfies the base class constructor. Storing the same instance in `this._customRepository` gives the service access to the custom methods without requiring a second DI registration.
 
+Note that when a service needs the `_customRepository` field, the public constructor chains to the internal constructor using `: this(...)` instead of calling `: base(...)` directly. This ensures the `_customRepository` field is assigned in a single place — the internal constructor — and avoids resolving from `ServiceLocator` twice.
+
 #### Skipping the Service Layer
 
 For modules that serve as pure data lookups with no business logic and no foreseeable need for validation or transformation, the service layer can be skipped entirely. In this case, the application layer depends on the repository interface directly, and the repository interface is declared `public` instead of `internal`:
-
 ```csharp
 // Repository interface (public — no service layer)
 namespace MySolution.Sdk.ReferenceTables;
@@ -508,11 +618,11 @@ public interface IDimensionRepository
 }
 ```
 
-This is a valid trade-off for read-only lookup data like state codes, country codes, or other dimension tables. The cost is that if business logic needs to be added later, the application layer's dependency must change from the repository interface to a new service interface, which is a breaking change.
+This is a valid trade-off for read-only lookup data like state codes, country codes, or other dimension tables. The cost is that if business logic needs to be added later, the application layer's dependency must change from the repository interface to a new service class, which is a breaking change.
 
 #### Common Service Pitfalls
 
-**Passing `ILoggerFactory` instead of `ILogger<T>` to the service constructor.** Service base classes inherit from `BaseClassWithLogging`, which takes `ILogger` in its constructor. There is no `ILoggerFactory` overload. Passing `ILoggerFactory` will not compile. Use `ILogger<TService>` and let the base class call `base(repository, logger)`.
+**Passing `ILoggerFactory` instead of `ILogger<T>` to the service constructor.** Service base classes inherit from `BaseClassWithLogging`, which takes `ILogger` in its constructor. There is no `ILoggerFactory` overload. Passing `ILoggerFactory` will not compile. Use `ILogger<TService>` and let the constructors call `base(...)`.
 
 **Using `this.Logger.LogDebug()` instead of `this.LogDebug()`.** The base class convenience methods check `IsEnabled()` before formatting the log message, which avoids unnecessary string allocation when the log level is disabled. Calling `this.Logger.LogDebug()` (if `Logger` is accessible) bypasses this check and formats the string unconditionally.
 
@@ -522,9 +632,15 @@ This is a valid trade-off for read-only lookup data like state codes, country co
 
 **Calling `this.Repository.CreateAsync()` when `base.CreateAsync()` is intended.** The protected `Repository` property calls the repository directly, bypassing any service-level overrides. If the service has a `CreateAsync` override that adds validation, calling `this.Repository.CreateAsync()` from another method will skip that validation. Use `base.CreateAsync()` to go through the base class virtual dispatch, which preserves the override chain.
 
+**Declaring the service interface as `public` instead of `internal`.** Service interfaces should be `internal`. The consuming application depends on the concrete service class (which is `public`), not the interface. Making the interface `public` exposes internal contracts that the application layer should not see. The concrete service class's public constructor — which accepts only `ILogger<T>` and resolves the repository via `ServiceLocator` — is the only surface the application needs.
+
 **Declaring the repository implementation as `public` instead of `internal`.** Repository implementations should be `internal sealed`. The application layer depends on the service (which is `public`), not the repository. Making the repository `public` breaks the encapsulation that the Repository-Service Pattern is designed to provide. Only the repository interface should be `public`, and only when the service layer is being skipped entirely (see "Skipping the Service Layer" above).
 
-**Trying to access `this.Repository` from outside the service.** The `Repository` property is `protected` — it is available inside the service class and its overrides, but not from external code such as controllers or test classes. Test classes should interact with the service through the public `ICustomEntityService` interface, not by accessing the repository directly.
+**Trying to access `this.Repository` from outside the service.** The `Repository` property is `protected` — it is available inside the service class and its overrides, but not from external code such as controllers or test classes. Test classes should interact with the service through the internal constructor and the service's public methods, not by accessing the repository directly.
+
+**Forgetting `using Roadbed;` in the service implementation file.** The public constructor calls `ServiceLocator.GetService<T>()`, which requires the `Roadbed` namespace. Omitting this using statement will produce a compile error on the `ServiceLocator` reference.
+
+**Using `: base(...)` instead of `: this(...)` when the service has a `_customRepository` field.** When the service stores a typed reference to the custom repository interface (for custom methods), the public constructor should chain to the internal constructor with `: this(ServiceLocator.GetService<ICustomEntityRepository>(), logger)`. This ensures the `_customRepository` field is assigned in a single place and avoids resolving from `ServiceLocator` twice.
 
 ---
 
@@ -557,7 +673,6 @@ A database repository uses Roadbed.Data for connection management and Roadbed.Da
 For a complete reference on connection factories, executor requests, retry logic, and Dapper type handlers, see the [Roadbed.Data Architecture Overview](/docs/architectural-design/architecture-roadbed-data.md), [Roadbed.Data.Sqlite Architecture Overview](/docs/architectural-design/architecture-roadbed-data-sqlite.md), and [Roadbed.Data.Dapper Architecture Overview](/docs/architectural-design/architecture-roadbed-data-dapper.md).
 
 ##### Interface
-
 ```csharp
 namespace MySolution.Sdk.MyProject;
 
@@ -573,7 +688,6 @@ internal interface ICustomEntityRepository
 ```
 
 ##### Implementation
-
 ```csharp
 namespace MySolution.Sdk.MyProject;
 
@@ -778,7 +892,6 @@ A REST API repository uses Roadbed.Net to make HTTP requests to an external serv
 For a complete reference on request configuration, retry policies, authentication, and response handling, see the [Roadbed.Net Architecture Overview](/docs/architectural-design/architecture-roadbed-net.md).
 
 ##### Interface
-
 ```csharp
 namespace MySolution.Sdk.MyProject;
 
@@ -794,7 +907,6 @@ internal interface ICustomEntityRepository
 ```
 
 ##### Implementation
-
 ```csharp
 namespace MySolution.Sdk.MyProject;
 

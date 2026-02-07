@@ -1,9 +1,4 @@
-<h1 align="center" style="border:0;margin:0;">
-  <img src="docs/assets/icon-intersection-100.png" alt="Roadbed" width="100" />
-  <br />
-  Roadbed
-  <br />
-</h1>
+<h1 align="center" style="border:0;margin:0;"> <img src="docs/assets/icon-intersection-100.png" alt="Roadbed" width="100" /> <br /> Roadbed <br /> </h1>
 
 ---
 
@@ -26,6 +21,7 @@ Roadbed provides a cohesive set of libraries that work together to accelerate de
 - **SDK Development Tools** - Patterns for building type-safe API client libraries
 
 ## Architecture
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                        Your Application                      │
@@ -57,16 +53,16 @@ Roadbed provides a cohesive set of libraries that work together to accelerate de
 
 For detailed documentation on each package:
 
-- [Roadbed.Common](./Roadbed.Common/README.md) - Shared types and utilities
-- [Roadbed.Crud](./Roadbed.Crud/README.md) - Repository/Entity patterns
-- [Roadbed.Data](./Roadbed.Data/README.md) - Data access abstractions
-- [Roadbed.Data.Dapper](./Roadbed.Data.Dapper/README.md) - Dapper configuration
-- [Roadbed.Data.Sqlite](./Roadbed.Data.Sqlite/README.md) - SQLite data access
-- [Roadbed.IO](./Roadbed.IO/README.md) - File I/O and CSV operations
-- [Roadbed.Messaging](./Roadbed.Messaging/README.md) - Message envelopes
-- [Roadbed.Net](./Roadbed.Net/README.md) - HTTP client wrapper
-- [Roadbed.Scheduling](./Roadbed.Scheduling/README.md) - Job scheduling
-- [Roadbed.Sdk.NationalWeatherService](./Roadbed.Sdk.NationalWeatherService/README.md) - NWS API client
+- [Roadbed.Common](/src/Roadbed.Common/README.md) - Shared types and utilities
+- [Roadbed.Crud](/src/Roadbed.Crud/README.md) - Repository/Entity patterns
+- [Roadbed.Data](/src/Roadbed.Data/README.md) - Data access abstractions
+- [Roadbed.Data.Dapper](/src/Roadbed.Data.Dapper/README.md) - Dapper configuration
+- [Roadbed.Data.Sqlite](/src/Roadbed.Data.Sqlite/README.md) - SQLite data access
+- [Roadbed.IO](/src/Roadbed.IO/README.md) - File I/O and CSV operations
+- [Roadbed.Messaging](/src/Roadbed.Messaging/README.md) - Message envelopes
+- [Roadbed.Net](/src/Roadbed.Net/README.md) - HTTP client wrapper
+- [Roadbed.Scheduling](/src/Roadbed.Scheduling/README.md) - Job scheduling
+- [Roadbed.Sdk.NationalWeatherService](/src/Roadbed.Sdk.NationalWeatherService/README.md) - NWS API client
 
 ## Quick Start
 
@@ -88,50 +84,23 @@ public sealed record FooRecord : BaseEntityRecord<long>
 }
 ```
 
-### 3. Create a Module Installer
+### 3. Implement a Repository
 
-```csharp
-using Roadbed;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Configuration;
-
-public class InstallFooModule : IServiceCollectionInstaller
-{
-    public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
-    {
-        // Register repository and service
-        services.AddScoped<IAsyncCrudlRepository<FooRecord, long>, FooRepository>();
-        services.AddScoped<FooService>();
-
-        // Capture ServiceLocator snapshot
-        ServiceLocator.SetLocatorProvider(services.BuildServiceProvider());
-    }
-}
-```
-
-### 4. Application Startup
-
-```csharp
-using Roadbed;
-
-var builder = WebApplication.CreateBuilder(args);
-
-// Auto-discovers and registers all IServiceCollectionInstaller implementations
-builder.Services.InstallModulesInAppDomain(builder.Configuration);
-
-var app = builder.Build();
-app.Run();
-```
-
-### 5. Implement a Repository
+Repository interfaces and implementations are `internal`. The repository handles data access only.
 
 ```csharp
 using Microsoft.Extensions.Logging;
 using Roadbed.Crud;
 using Roadbed.Crud.Repositories.Async;
 
-public class FooRepository
-    : BaseAsyncCrudlRepository<FooRecord, long>
+internal interface IFooRepository
+    : IAsyncCrudlRepository<FooRecord, long>
+{
+}
+
+internal sealed class FooRepository
+    : BaseAsyncCrudlRepository<FooRecord, long>,
+      IFooRepository
 {
     public FooRepository(ILogger<FooRepository> logger)
         : base(logger)
@@ -179,19 +148,31 @@ public class FooRepository
 }
 ```
 
-### 6. Implement a Service
+### 4. Implement a Service
+
+Service classes are `public sealed` with dual constructors: a public constructor for consuming applications (resolves the repository via `ServiceLocator`) and an internal constructor for unit tests (accepts the repository directly via `InternalsVisibleTo`).
 
 ```csharp
 using Microsoft.Extensions.Logging;
-using Roadbed.Crud;
-using Roadbed.Crud.Repositories.Async;
+using Roadbed;
 using Roadbed.Crud.Services.Async;
 
-public class FooService
+public sealed class FooService
     : BaseAsyncCrudlService<FooRecord, long>
 {
-    public FooService(
-        IAsyncCrudlRepository<FooRecord, long> repository,
+    /// <summary>
+    /// Public constructor for consuming applications.
+    /// </summary>
+    public FooService(ILogger<FooService> logger)
+        : base(ServiceLocator.GetService<IFooRepository>(), logger)
+    {
+    }
+
+    /// <summary>
+    /// Internal constructor for unit tests.
+    /// </summary>
+    internal FooService(
+        IFooRepository repository,
         ILogger<FooService> logger)
         : base(repository, logger)
     {
@@ -219,6 +200,42 @@ public class FooService
         return await this.CreateAsync(clone, cancellationToken);
     }
 }
+```
+
+### 5. Create a Module Installer
+
+The installer registers only the internal repository (for `ServiceLocator` resolution). The `public sealed` service class is consumed directly by the application — it is not registered in DI.
+
+```csharp
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Roadbed;
+
+public sealed class InstallFooModule : IServiceCollectionInstaller
+{
+    public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
+    {
+        // Register repository for ServiceLocator resolution
+        services.AddScoped<IFooRepository, FooRepository>();
+
+        // Capture ServiceLocator snapshot for NuGet self-containment
+        ServiceLocator.SetLocatorProvider(services.BuildServiceProvider());
+    }
+}
+```
+
+### 6. Application Startup
+
+```csharp
+using Roadbed;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Auto-discovers and registers all IServiceCollectionInstaller implementations
+builder.Services.InstallModulesInAppDomain(builder.Configuration);
+
+var app = builder.Build();
+app.Run();
 ```
 
 ### 7. Make HTTP Calls with NetHttpClient
@@ -295,7 +312,11 @@ this.LogDebug("Processing {Count} items with {Size} bytes", items.Count, totalSi
 
 ### Repository Pattern with Service Delegation
 
-Repositories handle data access. Services delegate to repositories and compose higher-level operations like `ExistsAsync` and `UpsertAsync` from repository primitives. This separation keeps concerns clear and code testable.
+Repositories handle data access and are `internal`. Services are `public sealed` and delegate to repositories, composing higher-level operations like `ExistsAsync` and `UpsertAsync` from repository primitives. This separation keeps concerns clear and code testable.
+
+### Dual Constructor Pattern
+
+Service classes expose a public constructor (resolves dependencies via `ServiceLocator`) and an internal constructor (accepts dependencies directly for unit testing via `InternalsVisibleTo`). This enables NuGet packages to be self-contained while remaining fully testable.
 
 ### Standardized Response Patterns
 
@@ -303,14 +324,14 @@ Repositories handle data access. Services delegate to repositories and compose h
 
 ### ServiceLocator for NuGet Self-Containment
 
-While generally an anti-pattern, ServiceLocator enables NuGet packages to operate self-contained without requiring consumers to manually register internal dependencies.
+While generally an anti-pattern, `ServiceLocator` enables NuGet packages to operate self-contained without requiring consumers to manually register internal dependencies.
 
 ## Complete Example: Foo Service with External API
 
 ```csharp
 using Microsoft.Extensions.Logging;
+using Roadbed;
 using Roadbed.Crud;
-using Roadbed.Crud.Repositories.Async;
 using Roadbed.Crud.Services.Async;
 using Roadbed.Net;
 
@@ -319,13 +340,29 @@ using Roadbed.Net;
 /// Inherits CRUDL operations and composes ExistsAsync/UpsertAsync
 /// from repository primitives.
 /// </summary>
-public class FooService
+public sealed class FooService
     : BaseAsyncCrudlService<FooRecord, long>
 {
     private readonly INetHttpClient _httpClient;
 
+    /// <summary>
+    /// Public constructor for consuming applications.
+    /// </summary>
     public FooService(
-        IAsyncCrudlRepository<FooRecord, long> repository,
+        INetHttpClient httpClient,
+        ILogger<FooService> logger)
+        : base(ServiceLocator.GetService<IFooRepository>(), logger)
+    {
+        ArgumentNullException.ThrowIfNull(httpClient);
+
+        this._httpClient = httpClient;
+    }
+
+    /// <summary>
+    /// Internal constructor for unit tests.
+    /// </summary>
+    internal FooService(
+        IFooRepository repository,
         INetHttpClient httpClient,
         ILogger<FooService> logger)
         : base(repository, logger)

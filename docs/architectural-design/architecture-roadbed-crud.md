@@ -15,10 +15,11 @@ This document is the authoritative reference for the Roadbed.Crud NuGet package.
 3. **Use `ArgumentException.ThrowIfNullOrWhiteSpace()`** for string validation.
 4. **Repositories are abstract** — every method must be implemented by the consuming class.
 5. **Services are virtual** — override only when adding business logic. Exists and Upsert come free.
-6. **Repository interfaces should be `internal`** — the application layer depends on the service interface, not the repository.
-7. **Use Newtonsoft.Json** for serialization, not System.Text.Json.
-8. **Use arrays** (not `IList<T>`) for DTO collections from APIs.
-9. **CancellationToken is always the last parameter** with `= default`.
+6. **Repository interfaces and service interfaces should be `internal`** — the application layer depends on the concrete service class, not any internal interface.
+7. **Concrete service classes are `public`** with a dual constructor pattern: a `public` constructor (takes only `ILogger<T>`, resolves the repository via `ServiceLocator`) and an `internal` constructor (takes the repository and `ILogger<T>` directly, for unit tests via `InternalsVisibleTo`).
+8. **Use Newtonsoft.Json** for serialization, not System.Text.Json.
+9. **Use arrays** (not `IList<T>`) for DTO collections from APIs.
+10. **CancellationToken is always the last parameter** with `= default`.
 
 See [Implementation Walkthrough](architecture-roadbed-crud.md#implementation-walkthrough) for step-by-step instructions on scaffolding a new module.
 
@@ -50,7 +51,6 @@ See [Implementation Walkthrough](architecture-roadbed-crud.md#implementation-wal
 ---
 
 ## File Directory Structure
-
 ```
 Roadbed.Common/
 └── src/
@@ -198,7 +198,6 @@ Understanding the return types is critical for correct implementation.
 ## Composite Hierarchy
 
 ### Repository Hierarchy (Async shown; Sync is identical)
-
 ```
 IAsyncListOnlyRepository<T, TId>
 │   IRepository<T, TId> + IAsyncListOperation
@@ -217,7 +216,6 @@ IAsyncCrudRepository<T, TId>
 ```
 
 ### Service Hierarchy (Async shown; Sync is identical)
-
 ```
 IAsyncListOnlyService<T, TId>
 │   IAsyncListOperation
@@ -238,13 +236,14 @@ IAsyncCrudService<T, TId>
 
 ### Key Difference: Repository vs Service
 
-| Aspect             | Repository                           | Service                                    |
-| ------------------ | ------------------------------------ | ------------------------------------------ |
-| Operations         | C, R, U, D, A, L (data primitives)   | C, R, U, D, A, L + **Exists** + **Upsert** |
-| Base class methods | `abstract` (must implement)          | `virtual` (override to add logic)          |
-| Marker interface   | Inherits `IRepository<TEntity, TId>` | Does not                                   |
-| Constructor        | `ILogger` (optional)                 | `IRepository` + `ILogger` (both required)  |
-| Visibility         | Typically `internal`                 | Typically `public` (the API boundary)      |
+| Aspect               | Repository                           | Service                                                                              |
+| -------------------- | ------------------------------------ | ------------------------------------------------------------------------------------ |
+| Operations           | C, R, U, D, A, L (data primitives)   | C, R, U, D, A, L + **Exists** + **Upsert**                                           |
+| Base class methods   | `abstract` (must implement)          | `virtual` (override to add logic)                                                    |
+| Marker interface     | Inherits `IRepository<TEntity, TId>` | Does not                                                                             |
+| Interface visibility | `internal`                           | `internal`                                                                           |
+| Class visibility     | `internal sealed`                    | `public sealed`                                                                      |
+| Constructor          | `ILogger` (optional)                 | Dual: public (`ILogger` + `ServiceLocator`) and internal (`IRepository` + `ILogger`) |
 
 ### Type Compatibility (Can assign [column] to [row]?)
 
@@ -261,7 +260,6 @@ IAsyncCrudService<T, TId>
 ## Entity Layer
 
 ### IEntity.cs
-
 ```csharp
 namespace Roadbed.Crud;
 
@@ -279,7 +277,6 @@ public interface IEntity<TId>
 ```
 
 ### BaseEntityRecord.cs
-
 ```csharp
 namespace Roadbed.Crud;
 
@@ -300,7 +297,6 @@ public abstract record BaseEntityRecord<TId> : IEntity<TId>
 ```
 
 ### BaseEntityClass.cs
-
 ```csharp
 namespace Roadbed.Crud;
 
@@ -337,7 +333,6 @@ public abstract class BaseEntityClass<TId> : IEntity<TId>
 ### IRepository.cs
 
 Only the generic marker exists. There is no non-generic `IRepository` interface.
-
 ```csharp
 namespace Roadbed.Crud;
 
@@ -365,7 +360,6 @@ Repository composite interfaces inherit from this marker. Service interfaces do 
 ## Async Operation Interfaces
 
 ### IAsyncCreateOperation.cs
-
 ```csharp
 namespace Roadbed.Crud.Operations.Async;
 
@@ -390,7 +384,6 @@ public interface IAsyncCreateOperation<TEntity, in TId>
 ```
 
 ### IAsyncReadOperation.cs
-
 ```csharp
 namespace Roadbed.Crud.Operations.Async;
 
@@ -421,7 +414,6 @@ public interface IAsyncReadOperation<TEntity, in TId>
 ```
 
 ### IAsyncUpdateOperation.cs
-
 ```csharp
 namespace Roadbed.Crud.Operations.Async;
 
@@ -446,7 +438,6 @@ public interface IAsyncUpdateOperation<TEntity, in TId>
 ```
 
 ### IAsyncDeleteOperation.cs
-
 ```csharp
 namespace Roadbed.Crud.Operations.Async;
 
@@ -476,7 +467,6 @@ public interface IAsyncDeleteOperation<TEntity, in TId>
 ```
 
 ### IAsyncArchiveOperation.cs
-
 ```csharp
 namespace Roadbed.Crud.Operations.Async;
 
@@ -507,7 +497,6 @@ public interface IAsyncArchiveOperation<TEntity, in TId>
 ```
 
 ### IAsyncListOperation.cs
-
 ```csharp
 namespace Roadbed.Crud.Operations.Async;
 
@@ -530,7 +519,6 @@ public interface IAsyncListOperation<TEntity, in TId>
 ```
 
 ### IAsyncExistsOperation.cs
-
 ```csharp
 namespace Roadbed.Crud.Operations.Async;
 
@@ -567,7 +555,6 @@ public interface IAsyncExistsOperation<TEntity, in TId>
 ```
 
 ### IAsyncUpsertOperation.cs
-
 ```csharp
 namespace Roadbed.Crud.Operations.Async;
 
@@ -641,7 +628,6 @@ All are in the `Roadbed.Crud.Repositories.Async` namespace and inherit from `IRe
 | `IAsyncCrudlRepository`    | `IAsyncCrudRepository` + `IAsyncListOnlyRepository` | C, R, U, D, L    |
 | `IAsyncCrudaRepository`    | `IAsyncCrudRepository` + `IAsyncArchiveOperation`   | C, R, U, D, A    |
 | `IAsyncCrudalRepository`   | `IAsyncCrudaRepository` + `IAsyncCrudlRepository`   | C, R, U, D, A, L |
-
 ```csharp
 // Example: IAsyncCrudlRepository.cs
 namespace Roadbed.Crud.Repositories.Async;
@@ -684,7 +670,6 @@ All repository base classes inherit from `BaseClassWithLogging` (in `Roadbed.Com
 | `BaseAsyncCrudlRepository<TEntity, TId>`    | C, R, U, D + `ListAsync`                                 |
 | `BaseAsyncCrudaRepository<TEntity, TId>`    | C, R, U, D + `ArchiveAsync`                              |
 | `BaseAsyncCrudalRepository<TEntity, TId>`   | C, R, U, D + `ArchiveAsync` + `ListAsync`                |
-
 ```csharp
 // Example: BaseAsyncCrudlRepository.cs
 namespace Roadbed.Crud.Repositories.Async;
@@ -770,7 +755,6 @@ All are in `Roadbed.Crud.Services.Async`. Service interfaces do **not** inherit 
 | `IAsyncCrudlService`    | `IAsyncCrudService` + `IAsyncListOnlyService`  | C, R, U, D, L, E, U    |
 | `IAsyncCrudaService`    | `IAsyncCrudService` + `IAsyncArchiveOperation` | C, R, U, D, A, E, U    |
 | `IAsyncCrudalService`   | `IAsyncCrudaService` + `IAsyncCrudlService`    | C, R, U, D, A, L, E, U |
-
 ```csharp
 // Example: IAsyncCrudlService.cs
 namespace Roadbed.Crud.Services.Async;
@@ -818,7 +802,6 @@ All service base classes inherit from `BaseClassWithLogging` and accept two cons
 | `BaseAsyncCrudlService`    | `IAsyncCrudlRepository`    | C, R, U, D, L + Exists, Upsert (7)    |
 | `BaseAsyncCrudaService`    | `IAsyncCrudaRepository`    | C, R, U, D, A + Exists, Upsert (7)    |
 | `BaseAsyncCrudalService`   | `IAsyncCrudalRepository`   | C, R, U, D, A, L + Exists, Upsert (8) |
-
 ```csharp
 // Example: BaseAsyncCrudlService.cs
 namespace Roadbed.Crud.Services.Async;
@@ -951,7 +934,6 @@ Identical structure to async service bases. The repository parameter is the sync
 ---
 
 ## Consuming Interface Decision Tree
-
 ```
 Step 1: Choose your execution mode
 ├── Async (REST APIs, databases, HTTP clients) → IAsync* prefix
@@ -976,12 +958,16 @@ Step 3: Choose your base class
     └── Implement interface methods manually
 
 Step 4: Do you need a service layer?
-├── Yes → Create service interface + class
+├── Yes → Create service interface (internal) + concrete class (public)
 │   ├── Service interface inherits from matching service composite
-│   ├── Service class inherits from matching service base
+│   ├── Concrete service class inherits from matching service base
+│   ├── Concrete service class is public sealed with dual constructors:
+│   │   ├── Public constructor: takes ILogger<T>, resolves repository via ServiceLocator
+│   │   └── Internal constructor: takes repository + ILogger<T> (for unit tests)
 │   ├── Service provides Exists and Upsert automatically (virtual)
 │   └── Override individual methods to add business logic
 └── No → Application layer depends on repository interface directly
+         (repository interface must be public in this case)
 ```
 
 ---
@@ -993,7 +979,6 @@ When a developer asks you to scaffold a new module, follow these steps in order.
 ### Step 1: Define the Entity
 
 Choose `BaseEntityRecord<TId>` for DTOs/immutable data or `BaseEntityClass<TId>` for mutable domain entities.
-
 ```csharp
 namespace Roadbed.Sdk.CustomerModule;
 
@@ -1024,7 +1009,6 @@ public sealed record Customer : BaseEntityRecord<string>
 ```
 
 ### Step 2: Define the Repository Interface (internal)
-
 ```csharp
 namespace Roadbed.Sdk.CustomerModule;
 
@@ -1040,7 +1024,6 @@ internal interface ICustomerRepository
 ```
 
 For Level 3 consumption, add custom methods to the interface:
-
 ```csharp
 internal interface ICustomerRepository
     : IAsyncCrudlRepository<Customer, string>
@@ -1052,7 +1035,6 @@ internal interface ICustomerRepository
 ```
 
 ### Step 3: Implement the Repository
-
 ```csharp
 namespace Roadbed.Sdk.CustomerModule;
 
@@ -1137,8 +1119,7 @@ internal sealed class CustomerRepository
 }
 ```
 
-### Step 4: Define the Service Interface (public)
-
+### Step 4: Define the Service Interface (internal)
 ```csharp
 namespace Roadbed.Sdk.CustomerModule;
 
@@ -1147,7 +1128,7 @@ using Roadbed.Crud.Services.Async;
 /// <summary>
 /// Service interface for Customer business operations.
 /// </summary>
-public interface ICustomerService
+internal interface ICustomerService
     : IAsyncCrudlService<Customer, string>
 {
 }
@@ -1155,17 +1136,18 @@ public interface ICustomerService
 
 ### Step 5: Implement the Service
 
+The concrete service class is `public sealed` and uses the dual constructor pattern. The `public` constructor accepts only `ILogger<T>` and resolves the repository via `ServiceLocator` — the consuming application uses this constructor and never sees the internal repository interface. The `internal` constructor accepts both the repository and the logger directly — unit test projects use this constructor via `InternalsVisibleTo` to inject mock repositories.
 ```csharp
 namespace Roadbed.Sdk.CustomerModule;
 
 using Microsoft.Extensions.Logging;
-using Roadbed.Crud.Repositories.Async;
+using Roadbed;
 using Roadbed.Crud.Services.Async;
 
 /// <summary>
 /// Service implementation for Customer business operations.
 /// </summary>
-internal sealed class CustomerService
+public sealed class CustomerService
     : BaseAsyncCrudlService<Customer, string>,
       ICustomerService
 {
@@ -1174,16 +1156,32 @@ internal sealed class CustomerService
     /// <summary>
     /// Initializes a new instance of the <see cref="CustomerService"/> class.
     /// </summary>
-    /// <param name="repository">Repository for Customer data access.</param>
     /// <param name="logger">Represents a type used to perform logging.</param>
     public CustomerService(
-        IAsyncCrudlRepository<Customer, string> repository,
+        ILogger<CustomerService> logger)
+        : base(
+            ServiceLocator.GetService<ICustomerRepository>(),
+            logger)
+    {
+    }
+
+    #endregion Public Constructors
+
+    #region Internal Constructors
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CustomerService"/> class.
+    /// </summary>
+    /// <param name="repository">Repository for Customer data access.</param>
+    /// <param name="logger">Represents a type used to perform logging.</param>
+    internal CustomerService(
+        ICustomerRepository repository,
         ILogger<CustomerService> logger)
         : base(repository, logger)
     {
     }
 
-    #endregion Public Constructors
+    #endregion Internal Constructors
 
     // All 7 methods (C, R, U, D, L + Exists + Upsert) work with zero overrides.
     // Override only when adding business logic, e.g.:
@@ -1204,11 +1202,13 @@ internal sealed class CustomerService
 
 ### Step 6: Register in DI
 
+The installer registers the repository against its internal interface so that `ServiceLocator` can resolve it inside the service's public constructor. The concrete service class is `public` and can be resolved by the DI container directly — the consuming application only needs to provide `ILogger<CustomerService>`.
 ```csharp
 namespace Roadbed.Sdk.CustomerModule;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Roadbed;
 
 /// <summary>
 /// Registers Customer module services in the DI container.
@@ -1221,48 +1221,52 @@ public sealed class CustomerModuleInstaller : IServiceCollectionInstaller
         IConfiguration configuration)
     {
         services.AddSingleton<ICustomerRepository, CustomerRepository>();
-        services.AddSingleton<ICustomerService, CustomerService>();
+
+        ServiceLocator.SetLocatorProvider(services.BuildServiceProvider());
     }
 }
 ```
 
 ### Architecture Diagram
-
 ```
 ┌─────────────────────────────────────────────────────┐
 │ Application Layer (Console, Web, etc.)              │
 │                                                     │
-│   Depends on: ICustomerService (public)             │
-│   Does NOT depend on: ICustomerRepository           │
+│   Depends on: CustomerService (public class)        │
+│   Does NOT see: ICustomerService, ICustomerRepository│
 └────────────────────────┬────────────────────────────┘
                          │
-                         │ ICustomerService (public interface)
+                         │ CustomerService (public class)
+                         │ Public constructor: ILogger<CustomerService>
                          │
 ┌────────────────────────▼────────────────────────────┐
 │ Roadbed.Sdk.CustomerModule (class library)          │
 │                                                     │
-│   public interface ICustomerService                 │
+│   internal interface ICustomerService               │ ← internal
 │       : IAsyncCrudlService<Customer, string>        │
 │                                                     │
-│   internal class CustomerService                    │
+│   public class CustomerService                      │ ← public
 │       : BaseAsyncCrudlService<Customer, string>     │
-│       Depends on: ICustomerRepository               │
+│       Public ctor: ILogger (resolves repo via       │
+│           ServiceLocator internally)                │
+│       Internal ctor: ICustomerRepository + ILogger  │
+│           (for unit tests via InternalsVisibleTo)   │
 │       Contains: validation, business rules, caching │
 │                                                     │
 │   internal interface ICustomerRepository            │ ← internal
 │       : IAsyncCrudlRepository<Customer, string>     │
 │                                                     │
-│   internal class CustomerRepository                 │
+│   internal class CustomerRepository                 │ ← internal
 │       : BaseAsyncCrudlRepository<Customer, string>  │
 │       Contains: pure data access                    │
 │                                                     │
 │   public class CustomerModuleInstaller              │
 │       : IServiceCollectionInstaller                 │
-│       Registers both service and repository in DI   │
+│       Registers repository for ServiceLocator       │
 └─────────────────────────────────────────────────────┘
 ```
 
-**Key point**: The repository interface is `internal`. The application layer only sees the service interface. The service is the public API of the class library.
+**Key points**: Both the repository interface and service interface are `internal`. The concrete service class is `public` — it is the only surface the application layer sees. The application provides `ILogger<CustomerService>` and the service resolves its own repository dependency internally.
 
 ---
 
@@ -1270,8 +1274,7 @@ public sealed class CustomerModuleInstaller : IServiceCollectionInstaller
 
 ### Example 1: Sync ListOnly, No Service
 
-For reference data that only needs listing (state codes, country codes, etc.), skip the service layer entirely.
-
+For reference data that only needs listing (state codes, country codes, etc.), skip the service layer entirely. When the service layer is skipped, the repository interface is `public` because the application layer depends on it directly.
 ```csharp
 // Entity
 namespace Roadbed.Sdk.ReferenceTables;
@@ -1322,7 +1325,6 @@ internal sealed class StateCodeRepository
 ### Example 2: Async CRUD + Custom Queries (Level 3)
 
 For entities where `ListAll` is impractical but filtered queries are needed.
-
 ```csharp
 // Repository interface — Crud composite + custom filtered queries
 internal interface IOrderRepository
@@ -1340,23 +1342,34 @@ internal interface IOrderRepository
 ```
 
 ### DI Registration
-
 ```csharp
+namespace Roadbed.Sdk.CustomerModule;
+
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Roadbed;
+
+/// <summary>
+/// Registers module services in the DI container.
+/// </summary>
 public sealed class DataInstaller : IServiceCollectionInstaller
 {
+    /// <inheritdoc/>
     public void ConfigureServices(
         IServiceCollection services,
         IConfiguration configuration)
     {
-        // CRUDL with service layer
+        // CRUDL with service layer — register repository for ServiceLocator
         services.AddSingleton<ICustomerRepository, CustomerRepository>();
-        services.AddSingleton<ICustomerService, CustomerService>();
 
-        // Sync ListOnly, no service layer
+        // Sync ListOnly, no service layer — register repository for direct DI resolution
         services.AddSingleton<IStateCodeRepository, StateCodeRepository>();
 
-        // CRUD + custom queries, no service layer
+        // CRUD + custom queries, no service layer — register repository for direct DI resolution
         services.AddSingleton<IOrderRepository, OrderRepository>();
+
+        // Capture point-in-time snapshot for ServiceLocator
+        ServiceLocator.SetLocatorProvider(services.BuildServiceProvider());
     }
 }
 ```
@@ -1378,7 +1391,6 @@ The old codebase used `Task<int>` for Create (returning ID) and `Task<bool>` for
 ### 2. Missing `this.` Keyword
 
 All instance member access must use `this.`:
-
 ```csharp
 // ✅ Correct
 this._repository.CreateAsync(entity, cancellationToken);
@@ -1390,7 +1402,6 @@ LogDebug("Creating entity");
 ```
 
 ### 3. Wrong Null Validation Pattern
-
 ```csharp
 // ✅ Correct
 ArgumentNullException.ThrowIfNull(repository);
@@ -1404,13 +1415,13 @@ if (string.IsNullOrWhiteSpace(id)) throw new ArgumentException(...);
 ### 4. Using ILoggerFactory Instead of ILogger
 
 Service base classes accept `ILogger`, not `ILoggerFactory`:
-
 ```csharp
 // ✅ Correct
 public CustomerService(
-    IAsyncCrudlRepository<Customer, string> repository,
     ILogger<CustomerService> logger)
-    : base(repository, logger)
+    : base(
+        ServiceLocator.GetService<ICustomerRepository>(),
+        logger)
 
 // ❌ Wrong — no ILoggerFactory overload exists
 public CustomerService(
@@ -1419,26 +1430,21 @@ public CustomerService(
     : base(repository, factory)
 ```
 
-
 ### 5. Accessing Protected Repository from Outside
 
 `Repository` is `protected` — test classes cannot access it:
-
 ```csharp
 // ❌ Won't compile — Repository is protected
 Assert.IsNotNull(entity.Repository);
 ```
 
-
 ### 6. Read Throwing for Missing Entities
 
 Read should return `null` when not found, not throw. This enables the composed `ExistsAsync` to work without exception-driven control flow.
 
-
 ### 7. CancellationToken Not Last
 
 `CancellationToken` must always be the last parameter:
-
 ```csharp
 // ✅ Correct
 public async Task ProcessAsync(
@@ -1456,7 +1462,6 @@ public async Task ProcessAsync(
 ### 8. Using `this.Logger.LogDebug()` Instead of `this.LogDebug()`
 
 When inheriting from `BaseClassWithLogging`, use the convenience methods that check the log level before formatting:
-
 ```csharp
 // ✅ Correct — checks IsEnabled first, avoids unnecessary string formatting
 this.LogDebug("Processing {Count} items", items.Count);
@@ -1465,6 +1470,102 @@ this.LogDebug("Processing {Count} items", items.Count);
 this.Logger.LogDebug("Processing {Count} items", items.Count);
 ```
 
+### 9. Declaring the Service Interface as `public`
 
+Service interfaces should be `internal`. The consuming application depends on the concrete service class (which is `public`), not the interface. Making the interface `public` exposes internal contracts that the application layer should not see.
+```csharp
+// ✅ Correct
+internal interface ICustomerService
+    : IAsyncCrudlService<Customer, string>
+{
+}
 
+// ❌ Wrong — exposes internal contract to consuming application
+public interface ICustomerService
+    : IAsyncCrudlService<Customer, string>
+{
+}
+```
 
+### 10. Declaring the Concrete Service as `internal`
+
+The concrete service class must be `public` so the consuming application can depend on it. The application does not see the internal interfaces — it only sees the concrete class and its public constructor.
+```csharp
+// ✅ Correct
+public sealed class CustomerService
+    : BaseAsyncCrudlService<Customer, string>,
+      ICustomerService
+
+// ❌ Wrong — consuming application cannot access the service
+internal sealed class CustomerService
+    : BaseAsyncCrudlService<Customer, string>,
+      ICustomerService
+```
+
+### 11. Single Constructor on Concrete Service
+
+Concrete services require two constructors: a `public` one for the consuming application (resolves repository via `ServiceLocator`) and an `internal` one for unit tests (accepts repository directly via `InternalsVisibleTo`).
+```csharp
+// ✅ Correct — dual constructor pattern
+public sealed class CustomerService
+    : BaseAsyncCrudlService<Customer, string>,
+      ICustomerService
+{
+    public CustomerService(
+        ILogger<CustomerService> logger)
+        : base(
+            ServiceLocator.GetService<ICustomerRepository>(),
+            logger)
+    {
+    }
+
+    internal CustomerService(
+        ICustomerRepository repository,
+        ILogger<CustomerService> logger)
+        : base(repository, logger)
+    {
+    }
+}
+
+// ❌ Wrong — single constructor exposes internal repository interface
+public sealed class CustomerService
+    : BaseAsyncCrudlService<Customer, string>,
+      ICustomerService
+{
+    public CustomerService(
+        IAsyncCrudlRepository<Customer, string> repository,
+        ILogger<CustomerService> logger)
+        : base(repository, logger)
+    {
+    }
+}
+```
+
+### 12. Missing `using Roadbed;` in Service Implementation
+
+The public constructor calls `ServiceLocator.GetService<T>()`, which requires the `Roadbed` namespace:
+```csharp
+// ✅ Correct
+using Roadbed;
+
+// ❌ Wrong — compile error on ServiceLocator reference
+// (missing using Roadbed;)
+```
+
+### 13. Missing `ServiceLocator.SetLocatorProvider()` in Installer
+
+The installer must call `ServiceLocator.SetLocatorProvider()` after registering services, otherwise the service's public constructor cannot resolve the repository:
+```csharp
+// ✅ Correct
+public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
+{
+    services.AddSingleton<ICustomerRepository, CustomerRepository>();
+    ServiceLocator.SetLocatorProvider(services.BuildServiceProvider());
+}
+
+// ❌ Wrong — ServiceLocator cannot resolve ICustomerRepository
+public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
+{
+    services.AddSingleton<ICustomerRepository, CustomerRepository>();
+}
+```

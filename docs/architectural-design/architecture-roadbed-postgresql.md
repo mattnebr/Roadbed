@@ -46,10 +46,10 @@ This document is the authoritative reference for the Roadbed.Data.Postgresql NuG
 
 Roadbed.Data.Postgresql contains **2 public types**.
 
-|Type|Kind|Purpose|
-|---|---|---|
-|`PostgresqlConnectionFactory`|Class|Concrete `IDataConnectionFactory` that creates `Npgsql.NpgsqlConnection` instances|
-|`PostgresqlExecutor`|Static class|Dapper-based query execution with built-in retry logic for transient PostgreSQL errors|
+| Type                          | Kind         | Purpose                                                                                |
+| ----------------------------- | ------------ | -------------------------------------------------------------------------------------- |
+| `PostgresqlConnectionFactory` | Class        | Concrete `IDataConnectionFactory` that creates `Npgsql.NpgsqlConnection` instances     |
+| `PostgresqlExecutor`          | Static class | Dapper-based query execution with built-in retry logic for transient PostgreSQL errors |
 
 ---
 
@@ -153,12 +153,12 @@ The primary API for executing SQL against a PostgreSQL database. All methods are
 
 ### Public Methods
 
-|Method|Returns|Dapper Method|Use Case|
-|---|---|---|---|
-|`ExecuteAsync`|`Task<int>` (rows affected)|`ExecuteAsync`|INSERT, UPDATE, DELETE, DDL|
-|`QueryAsync<T>`|`Task<IEnumerable<T>>`|`QueryAsync<T>`|SELECT returning multiple rows|
-|`QuerySingleOrDefaultAsync<T>`|`Task<T?>`|`QuerySingleOrDefaultAsync<T>`|SELECT returning zero or one row|
-|`ExecuteScalarAsync<T>`|`Task<T?>`|`ExecuteScalarAsync<T>`|SELECT returning a single value (COUNT, MAX, etc.)|
+| Method                         | Returns                     | Dapper Method                  | Use Case                                           |
+| ------------------------------ | --------------------------- | ------------------------------ | -------------------------------------------------- |
+| `ExecuteAsync`                 | `Task<int>` (rows affected) | `ExecuteAsync`                 | INSERT, UPDATE, DELETE, DDL                        |
+| `QueryAsync<T>`                | `Task<IEnumerable<T>>`      | `QueryAsync<T>`                | SELECT returning multiple rows                     |
+| `QuerySingleOrDefaultAsync<T>` | `Task<T?>`                  | `QuerySingleOrDefaultAsync<T>` | SELECT returning zero or one row                   |
+| `ExecuteScalarAsync<T>`        | `Task<T?>`                  | `ExecuteScalarAsync<T>`        | SELECT returning a single value (COUNT, MAX, etc.) |
 
 ### Method Signatures
 
@@ -172,12 +172,12 @@ public static async Task<TResult> MethodAsync<T>(
     CancellationToken cancellationToken = default);
 ```
 
-|Parameter|Required|Description|
-|---|---|---|
-|`request`|Yes|Query, parameters, and retry configuration|
-|`connectionFactory`|Yes|Database-specific factory (marker interface)|
-|`logger`|No|Falls back to `NullLogger.Instance` if null|
-|`cancellationToken`|No|Cancellation support (always last, `= default`)|
+| Parameter           | Required | Description                                     |
+| ------------------- | -------- | ----------------------------------------------- |
+| `request`           | Yes      | Query, parameters, and retry configuration      |
+| `connectionFactory` | Yes      | Database-specific factory (marker interface)    |
+| `logger`            | No       | Falls back to `NullLogger.Instance` if null     |
+| `cancellationToken` | No       | Cancellation support (always last, `= default`) |
 
 Both `request` and `connectionFactory` are validated with `ArgumentNullException.ThrowIfNull()`.
 
@@ -225,21 +225,21 @@ Execute query
 
 **Default retry configuration (from `DataExecutorRequest`):**
 
-|Property|Default|
-|---|---|
-|`RetriesEnabled`|`true`|
-|`MaxRetries`|`3`|
-|`DelayBetweenRetries`|`100ms`|
-|`DelayMultiplierEnabled`|`true`|
+| Property                 | Default |
+| ------------------------ | ------- |
+| `RetriesEnabled`         | `true`  |
+| `MaxRetries`             | `3`     |
+| `DelayBetweenRetries`    | `100ms` |
+| `DelayMultiplierEnabled` | `true`  |
 
 **Default backoff schedule:**
 
-|Attempt|Delay|
-|---|---|
-|1|100ms|
-|2|200ms|
-|3|300ms|
-|Exhausted|Throw `InvalidOperationException`|
+| Attempt   | Delay                             |
+| --------- | --------------------------------- |
+| 1         | 100ms                             |
+| 2         | 200ms                             |
+| 3         | 300ms                             |
+| Exhausted | Throw `InvalidOperationException` |
 
 ### Transient Error Detection
 
@@ -247,66 +247,66 @@ The executor retries only specific PostgreSQL SQLSTATE codes that represent temp
 
 #### Class 08 — Connection Exception
 
-|SQLSTATE|Constant|Meaning|Retry?|
-|---|---|---|---|
-|`08000`|`connection_exception`|General connection error|Yes|
-|`08001`|`sqlclient_unable_to_establish_sqlconnection`|Cannot establish connection|Yes|
-|`08003`|`connection_does_not_exist`|Connection lost|Yes|
-|`08004`|`sqlserver_rejected_establishment_of_sqlconnection`|Server rejected connection|Yes|
-|`08006`|`connection_failure`|Connection failure during transaction|Yes|
+| SQLSTATE | Constant                                            | Meaning                               | Retry? |
+| -------- | --------------------------------------------------- | ------------------------------------- | ------ |
+| `08000`  | `connection_exception`                              | General connection error              | Yes    |
+| `08001`  | `sqlclient_unable_to_establish_sqlconnection`       | Cannot establish connection           | Yes    |
+| `08003`  | `connection_does_not_exist`                         | Connection lost                       | Yes    |
+| `08004`  | `sqlserver_rejected_establishment_of_sqlconnection` | Server rejected connection            | Yes    |
+| `08006`  | `connection_failure`                                | Connection failure during transaction | Yes    |
 
 #### Class 40 — Transaction Rollback
 
-|SQLSTATE|Constant|Meaning|Retry?|
-|---|---|---|---|
-|`40001`|`serialization_failure`|Concurrent transaction conflict|Yes|
-|`40P01`|`deadlock_detected`|Two transactions deadlocked|Yes|
+| SQLSTATE | Constant                | Meaning                         | Retry? |
+| -------- | ----------------------- | ------------------------------- | ------ |
+| `40001`  | `serialization_failure` | Concurrent transaction conflict | Yes    |
+| `40P01`  | `deadlock_detected`     | Two transactions deadlocked     | Yes    |
 
 #### Class 53 — Insufficient Resources
 
-|SQLSTATE|Constant|Meaning|Retry?|
-|---|---|---|---|
-|`53000`|`insufficient_resources`|General resource exhaustion|Yes|
-|`53100`|`disk_full`|Disk full|Yes|
-|`53200`|`out_of_memory`|Server out of memory|Yes|
-|`53300`|`too_many_connections`|Connection limit reached|Yes|
+| SQLSTATE | Constant                 | Meaning                     | Retry? |
+| -------- | ------------------------ | --------------------------- | ------ |
+| `53000`  | `insufficient_resources` | General resource exhaustion | Yes    |
+| `53100`  | `disk_full`              | Disk full                   | Yes    |
+| `53200`  | `out_of_memory`          | Server out of memory        | Yes    |
+| `53300`  | `too_many_connections`   | Connection limit reached    | Yes    |
 
 #### Class 57 — Operator Intervention
 
-|SQLSTATE|Constant|Meaning|Retry?|
-|---|---|---|---|
-|`57P01`|`admin_shutdown`|Administrator shut down server|Yes|
-|`57P02`|`crash_shutdown`|Server crashed|Yes|
-|`57P03`|`cannot_connect_now`|Server starting up|Yes|
+| SQLSTATE | Constant             | Meaning                        | Retry? |
+| -------- | -------------------- | ------------------------------ | ------ |
+| `57P01`  | `admin_shutdown`     | Administrator shut down server | Yes    |
+| `57P02`  | `crash_shutdown`     | Server crashed                 | Yes    |
+| `57P03`  | `cannot_connect_now` | Server starting up             | Yes    |
 
 #### Class 58 — System Error
 
-|SQLSTATE|Constant|Meaning|Retry?|
-|---|---|---|---|
-|`58000`|`system_error`|General system error|Yes|
-|`58030`|`io_error`|Disk I/O error|Yes|
+| SQLSTATE | Constant       | Meaning              | Retry? |
+| -------- | -------------- | -------------------- | ------ |
+| `58000`  | `system_error` | General system error | Yes    |
+| `58030`  | `io_error`     | Disk I/O error       | Yes    |
 
 #### Non-Transient (Never Retried)
 
 All SQLSTATE codes not listed above are considered non-transient and propagate immediately. Common examples:
 
-|SQLSTATE|Constant|Meaning|
-|---|---|---|
-|`23505`|`unique_violation`|Duplicate key|
-|`23503`|`foreign_key_violation`|Foreign key constraint|
-|`42P01`|`undefined_table`|Table does not exist|
-|`42601`|`syntax_error`|SQL syntax error|
+| SQLSTATE | Constant                | Meaning                |
+| -------- | ----------------------- | ---------------------- |
+| `23505`  | `unique_violation`      | Duplicate key          |
+| `23503`  | `foreign_key_violation` | Foreign key constraint |
+| `42P01`  | `undefined_table`       | Table does not exist   |
+| `42601`  | `syntax_error`          | SQL syntax error       |
 
 ### Logging Behavior
 
 The executor uses level-checked logging throughout:
 
-|Event|Level|Message Pattern|
-|---|---|---|
-|Query execution start|Debug|`"Executing command: {Query}"` (truncated to 200 chars)|
-|Transient error, retrying|Warning|`"Transient error on attempt {Attempt}: {SqlState} - {Message}. Retrying in {DelayMs}ms..."`|
-|Successful after retry|Information|`"Command succeeded on attempt {Attempt}. Rows affected: {Rows}"`|
-|All retries exhausted|Error|`"Command failed after {Attempts} attempts"` (includes exception)|
+| Event                     | Level       | Message Pattern                                                                              |
+| ------------------------- | ----------- | -------------------------------------------------------------------------------------------- |
+| Query execution start     | Debug       | `"Executing command: {Query}"` (truncated to 200 chars)                                      |
+| Transient error, retrying | Warning     | `"Transient error on attempt {Attempt}: {SqlState} - {Message}. Retrying in {DelayMs}ms..."` |
+| Successful after retry    | Information | `"Command succeeded on attempt {Attempt}. Rows affected: {Rows}"`                            |
+| All retries exhausted     | Error       | `"Command failed after {Attempts} attempts"` (includes exception)                            |
 
 All log messages check `logger.IsEnabled()` before formatting to avoid unnecessary string allocation.
 
@@ -841,21 +841,21 @@ var dataConnectionString = new DataConnecionString(
 
 When migrating from SQLite to PostgreSQL, be aware of these key differences:
 
-|Feature|SQLite (`Roadbed.Data.Sqlite`)|PostgreSQL (`Roadbed.Data.Postgresql`)|
-|---|---|---|
-|Connection type|`SqliteConnection`|`NpgsqlConnection`|
-|Exception type|`SqliteException`|`PostgresException`|
-|Error codes|Integer (`5`, `6`, `10`, `13`)|SQLSTATE strings (`"08006"`, `"40001"`)|
-|Error code property|`ex.SqliteErrorCode`|`ex.SqlState`|
-|Boolean type|`INTEGER` (`1`/`0`)|`BOOLEAN` (`true`/`false`)|
-|Auto-increment|`AUTOINCREMENT`|`GENERATED ALWAYS AS IDENTITY` or `SERIAL`|
-|In-memory testing|`KeepAlive()` pattern|Use Docker or test database instance|
-|Upsert syntax|`INSERT OR REPLACE`|`INSERT ... ON CONFLICT ... DO UPDATE`|
-|Type system|Dynamic (5 storage classes)|Static (rich type system)|
-|Concurrency|File-level locking|MVCC with row-level locking|
-|Transient error count|4 error codes|16 SQLSTATE codes across 5 error classes|
-|Connection string type|`DataConnectionStringType.SQLite`|`DataConnectionStringType.PostgreSQL`|
-|NuGet dependency|`Microsoft.Data.Sqlite`|`Npgsql`|
+| Feature                | SQLite (`Roadbed.Data.Sqlite`)    | PostgreSQL (`Roadbed.Data.Postgresql`)     |
+| ---------------------- | --------------------------------- | ------------------------------------------ |
+| Connection type        | `SqliteConnection`                | `NpgsqlConnection`                         |
+| Exception type         | `SqliteException`                 | `PostgresException`                        |
+| Error codes            | Integer (`5`, `6`, `10`, `13`)    | SQLSTATE strings (`"08006"`, `"40001"`)    |
+| Error code property    | `ex.SqliteErrorCode`              | `ex.SqlState`                              |
+| Boolean type           | `INTEGER` (`1`/`0`)               | `BOOLEAN` (`true`/`false`)                 |
+| Auto-increment         | `AUTOINCREMENT`                   | `GENERATED ALWAYS AS IDENTITY` or `SERIAL` |
+| In-memory testing      | `KeepAlive()` pattern             | Use Docker or test database instance       |
+| Upsert syntax          | `INSERT OR REPLACE`               | `INSERT ... ON CONFLICT ... DO UPDATE`     |
+| Type system            | Dynamic (5 storage classes)       | Static (rich type system)                  |
+| Concurrency            | File-level locking                | MVCC with row-level locking                |
+| Transient error count  | 4 error codes                     | 16 SQLSTATE codes across 5 error classes   |
+| Connection string type | `DataConnectionStringType.SQLite` | `DataConnectionStringType.PostgreSQL`      |
+| NuGet dependency       | `Microsoft.Data.Sqlite`           | `Npgsql`                                   |
 
 ---
 
@@ -884,13 +884,13 @@ What are you doing?
 
 ### Transient PostgreSQL SQLSTATE Codes
 
-|Class|Category|Codes|
-|---|---|---|
-|08|Connection Exception|`08000`, `08001`, `08003`, `08004`, `08006`|
-|40|Transaction Rollback|`40001`, `40P01`|
-|53|Insufficient Resources|`53000`, `53100`, `53200`, `53300`|
-|57|Operator Intervention|`57P01`, `57P02`, `57P03`|
-|58|System Error|`58000`, `58030`|
+| Class | Category               | Codes                                       |
+| ----- | ---------------------- | ------------------------------------------- |
+| 08    | Connection Exception   | `08000`, `08001`, `08003`, `08004`, `08006` |
+| 40    | Transaction Rollback   | `40001`, `40P01`                            |
+| 53    | Insufficient Resources | `53000`, `53100`, `53200`, `53300`          |
+| 57    | Operator Intervention  | `57P01`, `57P02`, `57P03`                   |
+| 58    | System Error           | `58000`, `58030`                            |
 
 ### Integration Testing Checklist
 
@@ -902,3 +902,7 @@ Unlike SQLite, PostgreSQL has no in-memory mode. Integration tests require a run
 - [ ] Use transactions with rollback for test isolation
 - [ ] Consider Docker (`docker run -d -p 5432:5432 postgres:17`) for CI/CD
 - [ ] Consider GitHub Actions `services:` block for automated pipelines
+
+
+
+

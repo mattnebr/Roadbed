@@ -23,12 +23,14 @@ This document is the authoritative reference for the Roadbed.Net NuGet package. 
 11. **Don't register `IHttpClientFactory` or `INetHttpClient` manually** — `InstallNetHttpClient` handles this via auto-discovery.
 12. **Flatten namespaces** — only `using Roadbed.Net;` is needed. The `.Dtos`, `.Entities`, and `.Enumerators` suffixes were removed on purpose.
 13. **Use `this.LogDebug()`, `this.LogInformation()`, etc.** — never call `this.Logger.LogDebug()` directly. The base class methods check `IsEnabled()` before formatting.
+14. **Repository interfaces and service interfaces are `internal`** — the application layer depends on the concrete service class, not any internal interface.
+15. **Concrete service classes are `public sealed`** with a dual constructor pattern: a `public` constructor (takes only `ILogger<T>`, resolves the repository via `ServiceLocator`) and an `internal` constructor (takes the repository and `ILogger<T>` directly, for unit tests via `InternalsVisibleTo`).
 
 ---
 
 ## Table of Contents
 
-1. [For AI Assistants](architecture-roadbed-net.md#for-ai-assistants)
+1. [For AI Assistants](https://claude.ai/chat/architecture-roadbed-net.md#for-ai-assistants)
 2. [Type Catalog](architecture-roadbed-net.md#type-catalog)
 3. [Package Relationship](architecture-roadbed-net.md#package-relationship)
 4. [Namespace Convention](architecture-roadbed-net.md#namespace-convention)
@@ -507,20 +509,20 @@ return response.Data;
 
 The retry loop retries under these conditions:
 
-|Condition|HTTP Status Code|Retried?|
-|---|---|---|
-|Service Unavailable|503|✅ Yes|
-|Request Timeout|408|✅ Yes|
-|Gateway Timeout|504|✅ Yes|
-|`HttpRequestException` (network error)|—|✅ Yes|
-|`TimeoutException` (task timeout)|—|✅ Yes|
-|Bad Request|400|❌ No|
-|Unauthorized|401|❌ No|
-|Forbidden|403|❌ No|
-|Not Found|404|❌ No|
-|Internal Server Error|500|❌ No|
-|Bad Gateway|502|❌ No|
-|Any 2xx success|200–299|❌ No (returned immediately)|
+| Condition                              | HTTP Status Code | Retried?                    |
+| -------------------------------------- | ---------------- | --------------------------- |
+| Service Unavailable                    | 503              | ✅ Yes                       |
+| Request Timeout                        | 408              | ✅ Yes                       |
+| Gateway Timeout                        | 504              | ✅ Yes                       |
+| `HttpRequestException` (network error) | —                | ✅ Yes                       |
+| `TimeoutException` (task timeout)      | —                | ✅ Yes                       |
+| Bad Request                            | 400              | ❌ No                        |
+| Unauthorized                           | 401              | ❌ No                        |
+| Forbidden                              | 403              | ❌ No                        |
+| Not Found                              | 404              | ❌ No                        |
+| Internal Server Error                  | 500              | ❌ No                        |
+| Bad Gateway                            | 502              | ❌ No                        |
+| Any 2xx success                        | 200–299          | ❌ No (returned immediately) |
 
 ### Backoff Calculation
 
@@ -533,12 +535,12 @@ await Task.Delay(TimeSpan.FromSeconds(amount), cancellationToken);
 
 **With default values** (`DelayMultiplierInSeconds = 5`, `MaxAttempts = 3`):
 
-|After Attempt|Delay Calculation|Delay|
-|---|---|---|
-|0 (initial)|5^0 = 1|1 second|
-|1 (1st retry)|5^1 = 5|5 seconds|
-|2 (2nd retry)|5^2 = 25|25 seconds|
-|3 (3rd retry)|(last attempt — no delay after)|—|
+| After Attempt | Delay Calculation               | Delay      |
+| ------------- | ------------------------------- | ---------- |
+| 0 (initial)   | 5^0 = 1                         | 1 second   |
+| 1 (1st retry) | 5^1 = 5                         | 5 seconds  |
+| 2 (2nd retry) | 5^2 = 25                        | 25 seconds |
+| 3 (3rd retry) | (last attempt — no delay after) | —          |
 
 **Total maximum wait time** (default): 1 + 5 + 25 = **31 seconds** of delay, plus up to 4 × 15 = 60 seconds of request time = **~91 seconds worst case**.
 
@@ -570,17 +572,17 @@ The `CreateHttpRequestMessage` static method builds a fresh `HttpRequestMessage`
 
 ### Log Levels by Event
 
-|Event|Level|Example Message|
-|---|---|---|
-|Request start|`Debug`|`HTTP GET https://api.example.com/data (Compression: True)`|
-|Successful response|`Debug`|`HTTP 200 from https://api.example.com/data`|
-|Retriable HTTP status (503, 408, 504)|`Warning`|`HTTP 503 from ..., attempt 1 of 4, retrying after backoff`|
-|Network error during retry|`Warning`|`Network error calling ..., attempt 2 of 4, retrying after backoff`|
-|Timeout during retry|`Warning`|`Timeout calling ..., attempt 1 of 4, retrying after backoff`|
-|All retries exhausted|`Error`|`All retry attempts exhausted for GET ..., last status 503`|
-|JSON deserialization failure|`Error`|`Failed to deserialize response from ... to WeatherStationApiResponse`|
-|Socket exception (outer catch)|`Error`|`Socket error calling ...`|
-|Unexpected exception (outer catch)|`Error`|`Unexpected error calling ...`|
+| Event                                 | Level     | Example Message                                                        |
+| ------------------------------------- | --------- | ---------------------------------------------------------------------- |
+| Request start                         | `Debug`   | `HTTP GET https://api.example.com/data (Compression: True)`            |
+| Successful response                   | `Debug`   | `HTTP 200 from https://api.example.com/data`                           |
+| Retriable HTTP status (503, 408, 504) | `Warning` | `HTTP 503 from ..., attempt 1 of 4, retrying after backoff`            |
+| Network error during retry            | `Warning` | `Network error calling ..., attempt 2 of 4, retrying after backoff`    |
+| Timeout during retry                  | `Warning` | `Timeout calling ..., attempt 1 of 4, retrying after backoff`          |
+| All retries exhausted                 | `Error`   | `All retry attempts exhausted for GET ..., last status 503`            |
+| JSON deserialization failure          | `Error`   | `Failed to deserialize response from ... to WeatherStationApiResponse` |
+| Socket exception (outer catch)        | `Error`   | `Socket error calling ...`                                             |
+| Unexpected exception (outer catch)    | `Error`   | `Unexpected error calling ...`                                         |
 
 ### Structured Logging Parameters
 
@@ -640,6 +642,7 @@ public class InstallNetHttpClient : IServiceCollectionInstaller
 This walkthrough shows how to create an SDK class library that calls a REST API using Roadbed.Net and Roadbed.Crud together. The example creates an async CRUDL repository for a `Foo` entity retrieved from an external API.
 
 ### Step 1: Define the Entity
+
 ```csharp
 namespace Roadbed.Sdk.FooService;
 
@@ -676,6 +679,7 @@ public sealed record Foo : BaseEntityRecord<string>
 ```
 
 ### Step 2: Define the API Response DTOs
+
 ```csharp
 namespace Roadbed.Sdk.FooService;
 
@@ -719,6 +723,7 @@ public sealed record FooAttributes
 ```
 
 ### Step 3: Define the Repository Interface (internal)
+
 ```csharp
 namespace Roadbed.Sdk.FooService;
 
@@ -736,6 +741,7 @@ internal interface IFooRepository
 ### Step 4: Implement the Repository
 
 This is where Roadbed.Net is used. The repository injects `INetHttpClient` and calls `MakeHttpRequestAsync<TDto>()` with the API response DTO as the generic type:
+
 ```csharp
 namespace Roadbed.Sdk.FooService;
 
@@ -903,78 +909,130 @@ internal sealed class FooRepository
 ```
 
 ### Step 5: Define the Service Interface and Implementation
+
 ```csharp
-// Service interface (public)
 namespace Roadbed.Sdk.FooService;
 
 using Roadbed.Crud.Services.Async;
 
-public interface IFooService
+/// <summary>
+/// Service interface for Foo business operations.
+/// </summary>
+internal interface IFooService
     : IAsyncCrudlService<Foo, string>
 {
 }
+```
 
-// Service implementation (internal)
+```csharp
 namespace Roadbed.Sdk.FooService;
 
 using Microsoft.Extensions.Logging;
-using Roadbed.Crud.Repositories.Async;
+using Roadbed;
 using Roadbed.Crud.Services.Async;
 
-internal sealed class FooService
+/// <summary>
+/// Service implementation for Foo business operations.
+/// </summary>
+public sealed class FooService
     : BaseAsyncCrudlService<Foo, string>,
       IFooService
 {
+    #region Public Constructors
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FooService"/> class.
+    /// </summary>
+    /// <param name="logger">Represents a type used to perform logging.</param>
     public FooService(
-        IAsyncCrudlRepository<Foo, string> repository,
+        ILogger<FooService> logger)
+        : base(
+            ServiceLocator.GetService<IFooRepository>(),
+            logger)
+    {
+    }
+
+    #endregion Public Constructors
+
+    #region Internal Constructors
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FooService"/> class.
+    /// </summary>
+    /// <param name="repository">Repository for Foo data access.</param>
+    /// <param name="logger">Represents a type used to perform logging.</param>
+    internal FooService(
+        IFooRepository repository,
         ILogger<FooService> logger)
         : base(repository, logger)
     {
     }
+
+    #endregion Internal Constructors
 }
 ```
 
 ### Step 6: Register in DI
+
 ```csharp
-namespace Roadbed.Sdk.FooService.Installers;
+namespace Roadbed.Sdk.FooService;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Roadbed;
 
+/// <summary>
+/// Installer for Foo Service SDK.
+/// </summary>
 public sealed class InstallFooService : IServiceCollectionInstaller
 {
+    #region Public Methods
+
+    /// <inheritdoc/>
     public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
     {
+        // Register repository (internal) for ServiceLocator resolution
         services.AddScoped<IFooRepository, FooRepository>();
-        services.AddScoped<IFooService, FooService>();
 
+        // Capture ServiceLocator snapshot for NuGet self-containment
         ServiceLocator.SetLocatorProvider(services.BuildServiceProvider());
     }
+
+    #endregion Public Methods
 }
 ```
 
 ### Architecture Diagram
+
 ```
 ┌──────────────────────────────────────────────────┐
 │ Application Layer                                │
-│   Depends on: IFooService (public)               │
+│                                                  │
+│ Depends on:                                      │
+│   FooService (public)                            │
+│   Public ctor: ILogger<FooService>               │
 └────────────────────┬─────────────────────────────┘
                      │
                      ▼
 ┌──────────────────────────────────────────────────┐
 │ Roadbed.Sdk.FooService                           │
 │                                                  │
-│   FooService                                     │
+│   FooService (public sealed)                     │
 │       : BaseAsyncCrudlService (Roadbed.Crud)     │
-│       delegates to repository                    │
+│       Public ctor: ILogger (resolves repo via    │
+│           ServiceLocator)                        │
+│       Internal ctor: IFooRepository + ILogger    │
+│           (for unit tests via InternalsVisibleTo)│
+│       Delegates to repository                    │
 │                                                  │
-│   FooRepository                                  │
+│   FooRepository (internal sealed)                │
 │       : BaseAsyncCrudlRepository (Roadbed.Crud)  │
-│       injects INetHttpClient (Roadbed.Net)       │
-│       calls MakeHttpRequestAsync<TDto>()         │
+│       Injects INetHttpClient (Roadbed.Net)       │
+│       Calls MakeHttpRequestAsync<TDto>()         │
 │                                                  │
 │   InstallFooService                              │
 │       : IServiceCollectionInstaller              │
+│       Registers IFooRepository for ServiceLocator│
 └──────────┬──────────────────┬────────────────────┘
            │                  │
      injects Roadbed.Net inherits Roadbed.Crud
@@ -991,6 +1049,7 @@ public sealed class InstallFooService : IServiceCollectionInstaller
 ## Common Pitfalls
 
 ### 1. Not Checking `IsSuccessStatusCode` Before Accessing `Data`
+
 ```csharp
 // ❌ Wrong — Data is default! (null for reference types) on failure
 var items = response.Data.Items;
@@ -1003,6 +1062,7 @@ if (response.IsSuccessStatusCode)
 ```
 
 ### 2. Catching JsonException Around MakeHttpRequestAsync
+
 ```csharp
 // ❌ Unnecessary — NetHttpClient catches JsonException internally
 try
@@ -1028,6 +1088,7 @@ return response.Data;
 ```
 
 ### 3. Passing a Raw String Instead of a Uri
+
 ```csharp
 // ❌ Wrong — HttpEndPoint is typed as Uri?
 request.HttpEndPoint = "https://api.example.com/data";  // Won't compile
@@ -1037,6 +1098,7 @@ request.HttpEndPoint = new Uri("https://api.example.com/data");
 ```
 
 ### 4. Instantiating NetHttpClient Directly
+
 ```csharp
 // ❌ Wrong — bypasses DI, requires manual IHttpClientFactory and ILogger resolution
 var client = new NetHttpClient(factory, logger);
@@ -1054,6 +1116,7 @@ public FooRepository(
 ```
 
 ### 5. Injecting `NetHttpClient` Instead of `INetHttpClient`
+
 ```csharp
 // ❌ Wrong — depends on concrete class
 public FooRepository(
@@ -1067,6 +1130,7 @@ public FooRepository(
 ```
 
 ### 6. Registering IHttpClientFactory or INetHttpClient Manually
+
 ```csharp
 // ❌ Wrong — manual registration in Program.cs
 builder.Services.AddHttpClient();
@@ -1078,6 +1142,7 @@ builder.Services.InstallModulesInAppDomain(builder.Configuration);
 ```
 
 ### 7. Using System.Text.Json Instead of Newtonsoft.Json
+
 ```csharp
 // ❌ Wrong — DTOs must use Newtonsoft.Json attributes for automatic deserialization
 using System.Text.Json.Serialization;
@@ -1093,6 +1158,7 @@ public FooItem[] Items { get; set; }
 ```
 
 ### 8. Missing `this.` on Instance Members
+
 ```csharp
 // ❌ Wrong
 public FooRepository(
@@ -1114,6 +1180,7 @@ public FooRepository(
 ```
 
 ### 9. Calling `this.Logger.LogDebug()` Instead of `this.LogDebug()`
+
 ```csharp
 // ❌ Wrong — formats string even if Debug level is disabled
 this.Logger.LogDebug("Reading Foo {Id}", id);
@@ -1123,6 +1190,7 @@ this.LogDebug("Reading Foo {Id}", id);
 ```
 
 ### 10. Wrong CancellationToken Position
+
 ```csharp
 // ❌ Wrong — CancellationToken is not the last parameter
 public async Task<Foo?> ReadAsync(
@@ -1136,6 +1204,7 @@ public async Task<Foo?> ReadAsync(
 ```
 
 ### 11. Setting Authentication When AuthenticationType Is Unknown
+
 ```csharp
 // ❌ Wrong — Unknown type means no Authorization header is added
 request.Authentication = new NetHttpAuthentication
@@ -1152,10 +1221,38 @@ request.Authentication = new NetHttpAuthentication
 };
 ```
 
-### 12. Forgetting SetLocatorProvider in the SDK Installer
+### 12. Registering Service Interfaces in the SDK Installer
+
+Service interfaces are `internal` and the concrete service class is `public`. The installer only registers the repository (for `ServiceLocator` resolution). The consuming application resolves the concrete service class directly.
+
 ```csharp
-// ❌ Wrong — other Roadbed internals may fail to resolve services
-public class InstallFooService : IServiceCollectionInstaller
+// ❌ Wrong — service interface should not be registered
+public sealed class InstallFooService : IServiceCollectionInstaller
+{
+    public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddScoped<IFooRepository, FooRepository>();
+        services.AddScoped<IFooService, FooService>();
+        ServiceLocator.SetLocatorProvider(services.BuildServiceProvider());
+    }
+}
+
+// ✅ Correct — only register repository for ServiceLocator
+public sealed class InstallFooService : IServiceCollectionInstaller
+{
+    public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddScoped<IFooRepository, FooRepository>();
+        ServiceLocator.SetLocatorProvider(services.BuildServiceProvider());
+    }
+}
+```
+
+### 13. Forgetting SetLocatorProvider in the SDK Installer
+
+```csharp
+// ❌ Wrong — service's public constructor can't resolve repository via ServiceLocator
+public sealed class InstallFooService : IServiceCollectionInstaller
 {
     public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
     {
@@ -1165,7 +1262,7 @@ public class InstallFooService : IServiceCollectionInstaller
 }
 
 // ✅ Correct
-public class InstallFooService : IServiceCollectionInstaller
+public sealed class InstallFooService : IServiceCollectionInstaller
 {
     public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
     {
@@ -1180,12 +1277,15 @@ public class InstallFooService : IServiceCollectionInstaller
 ## Quick Reference
 
 ### Using Statements
+
 ```csharp
+using Roadbed;           // ServiceLocator, BaseClassWithLogging, IServiceCollectionInstaller
 using Roadbed.Net;       // INetHttpClient, request/response types, enums
 using Newtonsoft.Json;    // DTO attributes (JsonProperty) — deserialization is handled internally
 ```
 
 ### Minimal Request Pattern (DTO Deserialization)
+
 ```csharp
 var request = new NetHttpRequest
 {
@@ -1203,6 +1303,7 @@ if (response.IsSuccessStatusCode)
 ```
 
 ### Raw String Pattern (Manual Deserialization)
+
 ```csharp
 var request = new NetHttpRequest
 {
@@ -1219,6 +1320,7 @@ if (response.IsSuccessStatusCode)
 ```
 
 ### POST Request Pattern
+
 ```csharp
 var payload = JsonConvert.SerializeObject(entity);
 
@@ -1240,6 +1342,7 @@ NetHttpResponse<CreateResourceResponse> response =
 ```
 
 ### Custom Retry Configuration
+
 ```csharp
 var request = new NetHttpRequest
 {
@@ -1255,6 +1358,7 @@ var request = new NetHttpRequest
 ```
 
 ### Disable Retries
+
 ```csharp
 var request = new NetHttpRequest
 {
@@ -1268,6 +1372,7 @@ var request = new NetHttpRequest
 ```
 
 ### Repository Constructor Pattern
+
 ```csharp
 internal sealed class FooRepository
     : BaseAsyncCrudlRepository<Foo, string>,
@@ -1288,13 +1393,13 @@ internal sealed class FooRepository
 
 ### NetHttpRequest Defaults Summary
 
-| Property                     | Default     |
-| ---------------------------- | ----------- |
-| `Method`                     | GET         |
-| `EnableCompression`          | `true`      |
-| `TimeoutInSecondsPerAttempt` | 15 seconds  |
-| `RetryPattern.MaxAttempts`   | 3           |
-| `RetryPattern.DelayMultiplierInSeconds` | 5 |
-| `Content`                    | `null`      |
-| `Authentication`             | `null`      |
-| `HttpHeaders`                | Empty list  |
+|Property|Default|
+|---|---|
+|`Method`|GET|
+|`EnableCompression`|`true`|
+|`TimeoutInSecondsPerAttempt`|15 seconds|
+|`RetryPattern.MaxAttempts`|3|
+|`RetryPattern.DelayMultiplierInSeconds`|5|
+|`Content`|`null`|
+|`Authentication`|`null`|
+|`HttpHeaders`|Empty list|

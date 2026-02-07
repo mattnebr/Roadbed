@@ -405,7 +405,7 @@ public sealed record FooDto
 
 ### Step 2: Define the Database Factory
 
-See [Roadbed.Data Architecture](https://claude.ai/Roadbed.Data/docs/architecture.md) for the full factory pattern. Summary:
+See [Roadbed.Data Architecture](architecture-roadbed-data.md) for the full factory pattern. Summary:
 
 ```csharp
 // Marker interface

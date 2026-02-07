@@ -25,22 +25,22 @@ This document is the authoritative reference for the Roadbed.Data and Roadbed.Da
 
 ## Table of Contents
 
-1. [For AI Assistants](https://claude.ai/chat/95ea44ba-8bb4-432a-9215-0d25934a8fcc#for-ai-assistants)
-2. [Type Catalog](https://claude.ai/chat/95ea44ba-8bb4-432a-9215-0d25934a8fcc#type-catalog)
-3. [Package Relationship](https://claude.ai/chat/95ea44ba-8bb4-432a-9215-0d25934a8fcc#package-relationship)
-4. [Connection Factory Pattern](https://claude.ai/chat/95ea44ba-8bb4-432a-9215-0d25934a8fcc#connection-factory-pattern)
-    - [IDataConnectionFactory](https://claude.ai/chat/95ea44ba-8bb4-432a-9215-0d25934a8fcc#idataconnectionfactory)
-    - [SqliteConnectionFactory](https://claude.ai/chat/95ea44ba-8bb4-432a-9215-0d25934a8fcc#sqliteconnectionfactory)
-    - [Creating a Database-Specific Factory](https://claude.ai/chat/95ea44ba-8bb4-432a-9215-0d25934a8fcc#creating-a-database-specific-factory)
-5. [Connection Strings](https://claude.ai/chat/95ea44ba-8bb4-432a-9215-0d25934a8fcc#connection-strings)
-    - [DataConnecionString](https://claude.ai/chat/95ea44ba-8bb4-432a-9215-0d25934a8fcc#dataconnecionstring)
-    - [DataConnectionStringType](https://claude.ai/chat/95ea44ba-8bb4-432a-9215-0d25934a8fcc#dataconnectionstringtype)
-    - [Connection String Templates](https://claude.ai/chat/95ea44ba-8bb4-432a-9215-0d25934a8fcc#connection-string-templates)
-6. [Query Execution](https://claude.ai/chat/95ea44ba-8bb4-432a-9215-0d25934a8fcc#query-execution)
-    - [DataExecutorRequest](https://claude.ai/chat/95ea44ba-8bb4-432a-9215-0d25934a8fcc#dataexecutorrequest)
-    - [Retry Configuration](https://claude.ai/chat/95ea44ba-8bb4-432a-9215-0d25934a8fcc#retry-configuration)
-7. [Implementation Walkthrough](https://claude.ai/chat/95ea44ba-8bb4-432a-9215-0d25934a8fcc#implementation-walkthrough)
-8. [Common Pitfalls](https://claude.ai/chat/95ea44ba-8bb4-432a-9215-0d25934a8fcc#common-pitfalls)
+1. [For AI Assistants](architecture-roadbed-data.md#for-ai-assistants)
+2. [Type Catalog](architecture-roadbed-data.md#type-catalog)
+3. [Package Relationship](architecture-roadbed-data.md#package-relationship)
+4. [Connection Factory Pattern](architecture-roadbed-data.md#connection-factory-pattern)
+    - [IDataConnectionFactory](architecture-roadbed-data.md#idataconnectionfactory)
+    - [SqliteConnectionFactory](architecture-roadbed-data.md#sqliteconnectionfactory)
+    - [Creating a Database-Specific Factory](architecture-roadbed-data.md#creating-a-database-specific-factory)
+5. [Connection Strings](architecture-roadbed-data.md#connection-strings)
+    - [DataConnecionString](architecture-roadbed-data.md#dataconnecionstring)
+    - [DataConnectionStringType](architecture-roadbed-data.md#dataconnectionstringtype)
+    - [Connection String Templates](architecture-roadbed-data.md#connection-string-templates)
+6. [Query Execution](architecture-roadbed-data.md#query-execution)
+    - [DataExecutorRequest](architecture-roadbed-data.md#dataexecutorrequest)
+    - [Retry Configuration](architecture-roadbed-data.md#retry-configuration)
+7. [Implementation Walkthrough](architecture-roadbed-data.md#implementation-walkthrough)
+8. [Common Pitfalls](architecture-roadbed-data.md#common-pitfalls)
 
 ---
 
@@ -57,9 +57,9 @@ This document is the authoritative reference for the Roadbed.Data and Roadbed.Da
 
 ### Roadbed.Data.Sqlite (1 type)
 
-| Type                      | Kind  | Namespace             | Purpose                                                         |
-| ------------------------- | ----- | --------------------- | --------------------------------------------------------------- |
-| `SqliteConnectionFactory` | Class | `Roadbed.Data.Sqlite` | Concrete `IDataConnectionFactory` using `Microsoft.Data.Sqlite` |
+|Type|Kind|Namespace|Purpose|
+|---|---|---|---|
+|`SqliteConnectionFactory`|Class|`Roadbed.Data.Sqlite`|Concrete `IDataConnectionFactory` using `Microsoft.Data.Sqlite`|
 
 ---
 
@@ -196,7 +196,14 @@ public class FooDatabaseFactory(DataConnecionString connection)
 #### Step 3: DI Registration
 
 ```csharp
-public class InstallFooDatabase : IServiceCollectionInstaller
+namespace Foo.Database;
+
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Roadbed;
+using Roadbed.Data;
+
+public sealed class InstallFooDatabase : IServiceCollectionInstaller
 {
     public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
     {
@@ -216,8 +223,9 @@ public class InstallFooDatabase : IServiceCollectionInstaller
 #### Step 4: Usage in Repositories
 
 ```csharp
-namespace Foo.Sdk;
+namespace Foo.Database;
 
+using Microsoft.Extensions.Logging;
 using Roadbed;
 
 internal sealed class FooRepository : BaseClassWithLogging
@@ -296,11 +304,11 @@ public class DataConnecionString
 
 ### DataConnectionStringType
 
-| Value            | Int | Description                              |
-| ---------------- | --- | ---------------------------------------- |
-| `Unknown`        | 0   | Default / unset                          |
-| `Sqlite`         | 1   | SQLite file-based database               |
-| `SqliteInMemory` | 2   | SQLite in-memory database (shared cache) |
+|Value|Int|Description|
+|---|---|---|
+|`Unknown`|0|Default / unset|
+|`Sqlite`|1|SQLite file-based database|
+|`SqliteInMemory`|2|SQLite in-memory database (shared cache)|
 
 ### Connection String Templates
 
@@ -484,13 +492,14 @@ public class FooDatabaseFactory(DataConnecionString connection)
 ### Step 3: Create the Installer
 
 ```csharp
-namespace Foo.Database.Installers;
+namespace Foo.Database;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Roadbed;
 using Roadbed.Data;
 
-public class InstallFooDatabase : IServiceCollectionInstaller
+public sealed class InstallFooDatabase : IServiceCollectionInstaller
 {
     public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
     {
@@ -510,11 +519,10 @@ public class InstallFooDatabase : IServiceCollectionInstaller
 ### Step 4: Use in a Repository
 
 ```csharp
-namespace Foo.Sdk;
+namespace Foo.Database;
 
 using Microsoft.Extensions.Logging;
 using Roadbed;
-using Foo.Database;
 
 internal sealed class FooRepository : BaseClassWithLogging
 {
@@ -710,6 +718,7 @@ var conn = new DataConnecionString(DataConnectionStringType.SqliteInMemory)
 ### Required Using Statements
 
 ```csharp
+using Roadbed;              // ServiceLocator, IServiceCollectionInstaller, BaseClassWithLogging
 using Roadbed.Data;         // Interfaces, connection string, executor request
 using Roadbed.Data.Sqlite;  // SqliteConnectionFactory (only in factory implementation)
 ```

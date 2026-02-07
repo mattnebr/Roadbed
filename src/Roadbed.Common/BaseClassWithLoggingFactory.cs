@@ -31,11 +31,6 @@ public abstract class BaseClassWithLoggingFactory<TCategoryName>
     #region Private Fields
 
     /// <summary>
-    /// Container for the public property Logger.
-    /// </summary>
-    private readonly ILogger<TCategoryName> _logger;
-
-    /// <summary>
     /// Container for the public property LoggerFactory.
     /// </summary>
     private readonly ILoggerFactory _loggerFactory;
@@ -52,7 +47,6 @@ public abstract class BaseClassWithLoggingFactory<TCategoryName>
         : base()
     {
         this._loggerFactory = NullLoggerFactory.Instance;
-        this._logger = NullLogger<TCategoryName>.Instance;
     }
 
     /// <summary>
@@ -64,8 +58,6 @@ public abstract class BaseClassWithLoggingFactory<TCategoryName>
         : base(logger)
     {
         this._loggerFactory = NullLoggerFactory.Instance;
-        this._logger = logger as ILogger<TCategoryName>
-            ?? NullLogger<TCategoryName>.Instance;
     }
 
     /// <summary>
@@ -80,17 +72,11 @@ public abstract class BaseClassWithLoggingFactory<TCategoryName>
             .CreateLogger<TCategoryName>())
     {
         this._loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
-        this._logger = this._loggerFactory.CreateLogger<TCategoryName>();
     }
 
     #endregion Protected Constructors
 
     #region Public Properties
-
-    /// <summary>
-    /// Gets the type used to perform logging.
-    /// </summary>
-    public ILogger<TCategoryName> Logger => this._logger;
 
     /// <summary>
     /// Gets the type used to configure the logging system and create instances of

@@ -69,6 +69,20 @@ public abstract class BaseClassWithLogging
 
     #endregion Protected Constructors
 
+    #region Protected Properties
+
+    /// <summary>
+    /// Gets the logger instance for passing to external libraries.
+    /// </summary>
+    /// <remarks>
+    /// Prefer the convenience methods (e.g., <c>this.LogDebug(...)</c>) for direct
+    /// logging. Use this property only when an <see cref="ILogger"/> must be passed
+    /// to another component (e.g., <c>SqliteExecutor</c>).
+    /// </remarks>
+    protected ILogger Logger => this._logger;
+
+    #endregion Protected Properties
+
     #region Public Methods
 
     /// <summary>

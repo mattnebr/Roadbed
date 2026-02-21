@@ -138,13 +138,29 @@ public class InstallScheduling : IServiceCollectionInstaller
             .Where(d => d.ServiceType == typeof(ISchedulingJob))
             .Select(d => d.ImplementationType)
             .Where(t => t != null)
-            .Distinct();
+            .Distinct()
+            .ToList();
+
+        // Build a single temporary provider for reading job schedule metadata
+        using var tempProvider = services.BuildServiceProvider();
 
         foreach (var jobType in jobTypes)
         {
-            // Create a temporary instance to read configuration
-            var tempProvider = services.BuildServiceProvider();
-            var job = (ISchedulingJob)tempProvider.GetRequiredService(jobType!);
+            ISchedulingJob job;
+
+            try
+            {
+                job = (ISchedulingJob)tempProvider.GetRequiredService(jobType!);
+            }
+            catch (InvalidOperationException ex)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to resolve scheduling job '{jobType!.Name}' during Quartz configuration. " +
+                    $"Job constructors must only depend on services registered before AddQuartz runs. " +
+                    $"For runtime-only dependencies (e.g., IScheduler, ISchedulerFactory), " +
+                    $"inject IServiceProvider and resolve them in ExecuteAsync instead.",
+                    ex);
+            }
 
             var schedule = job.Schedule;
             var jobKey = new JobKey(job.Name, schedule.GroupName);

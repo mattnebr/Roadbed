@@ -4,6 +4,7 @@ using System;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Quartz;
 using Roadbed.Scheduling.Services;
@@ -16,7 +17,7 @@ public class SchedulingScheduledJobsSummaryJob
 {
     #region Private Fields
 
-    private readonly IScheduler _scheduler;
+    private readonly IServiceProvider _serviceProvider;
 
     #endregion Private Fields
 
@@ -26,11 +27,11 @@ public class SchedulingScheduledJobsSummaryJob
     /// Initializes a new instance of the <see cref="SchedulingScheduledJobsSummaryJob"/> class.
     /// </summary>
     /// <param name="logger">Logger for diagnostics.</param>
-    /// <param name="scheduler">Quartz scheduler to query for active jobs.</param>
-    /// <exception cref="ArgumentNullException">Thrown when logger or scheduler is null.</exception>
+    /// <param name="serviceProvider">Service provider to resolve the scheduler factory at execution time.</param>
+    /// <exception cref="ArgumentNullException">Thrown when logger or serviceProvider is null.</exception>
     public SchedulingScheduledJobsSummaryJob(
         ILogger<SchedulingScheduledJobsSummaryJob> logger,
-        IScheduler scheduler)
+        IServiceProvider serviceProvider)
         : base(
             name: "ScheduledJobsSummary",
             description: "Logs a daily summary of all actively scheduled jobs in the system",
@@ -42,8 +43,8 @@ public class SchedulingScheduledJobsSummaryJob
             },
             logger: logger)
     {
-        ArgumentNullException.ThrowIfNull(scheduler);
-        this._scheduler = scheduler;
+        ArgumentNullException.ThrowIfNull(serviceProvider);
+        this._serviceProvider = serviceProvider;
     }
 
     #endregion Public Constructors
@@ -55,11 +56,14 @@ public class SchedulingScheduledJobsSummaryJob
     {
         this.LogDebug("Starting scheduled jobs summary");
 
+        var schedulerFactory = this._serviceProvider.GetRequiredService<ISchedulerFactory>();
+        IScheduler scheduler = await schedulerFactory.GetScheduler(cancellationToken);
+
         StringBuilder summary = new StringBuilder();
 
         int totalJobs = await SchedulingJobSummaryService.CreateJobScheduleSummaryAsync(
             summary,
-            this._scheduler,
+            scheduler,
             cancellationToken);
 
         this.LogInformation("{JobsSummary}", summary.ToString());

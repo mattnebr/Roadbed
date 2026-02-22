@@ -311,13 +311,13 @@ public sealed class NwsOffice
     {
         if (response == null)
         {
-            this.LogWarning("Unable to map office response for ID {OfficeId}: response is null", this.Id ?? "unknown");
+            this.LogDebug("Unable to map office response for ID {OfficeId}: response is null", this.Id ?? "unknown");
             return;
         }
 
         if (response.Address == null)
         {
-            this.LogWarning("Unable to map office response for ID {OfficeId}: address is null", this.Id ?? "unknown");
+            this.LogDebug("Unable to map office response for ID {OfficeId}: address is null", this.Id ?? "unknown");
             return;
         }
 

@@ -42,7 +42,7 @@ public sealed class LoggingMetricsAdapter
     {
         if (!string.IsNullOrWhiteSpace(info.ResultMessage))
         {
-            this.LogInformation(
+            this.LogDebug(
                 "Job {JobName} ({JobGroup}) completed in {DurationMs}ms - {ResultMessage}",
                 info.JobName,
                 info.JobGroup,
@@ -51,7 +51,7 @@ public sealed class LoggingMetricsAdapter
         }
         else
         {
-            this.LogInformation(
+            this.LogDebug(
                 "Job {JobName} ({JobGroup}) completed in {DurationMs}ms",
                 info.JobName,
                 info.JobGroup,
@@ -64,7 +64,7 @@ public sealed class LoggingMetricsAdapter
     {
         if (!string.IsNullOrWhiteSpace(info.ResultMessage))
         {
-            this.LogError(
+            this.LogWarning(
                 exception,
                 "Job {JobName} ({JobGroup}) failed after {DurationMs}ms - {ResultMessage}",
                 info.JobName,
@@ -74,7 +74,7 @@ public sealed class LoggingMetricsAdapter
         }
         else
         {
-            this.LogError(
+            this.LogWarning(
                 exception,
                 "Job {JobName} ({JobGroup}) failed after {DurationMs}ms",
                 info.JobName,
@@ -96,7 +96,7 @@ public sealed class LoggingMetricsAdapter
     /// <inheritdoc/>
     public void JobStarted(JobExecutionInfo info)
     {
-        this.LogInformation(
+        this.LogDebug(
             "Job {JobName} ({JobGroup}) started - FireInstanceId: {FireInstanceId}",
             info.JobName,
             info.JobGroup,

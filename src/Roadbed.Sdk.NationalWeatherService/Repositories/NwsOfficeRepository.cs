@@ -64,14 +64,14 @@ internal sealed class NwsOfficeRepository
 
             if (string.IsNullOrEmpty(response.HttpStatusCodeDescription))
             {
-                this.LogError(
+                this.LogDebug(
                     "API request failed for endpoint {Endpoint}. Status: {StatusCode}",
                     endpoint,
                     response.HttpStatusCode);
             }
             else
             {
-                this.LogError(
+                this.LogDebug(
                     "API request failed for endpoint {Endpoint}. Status: {StatusCode} - {StatusDescription}",
                     endpoint,
                     response.HttpStatusCode,
@@ -87,7 +87,7 @@ internal sealed class NwsOfficeRepository
 
         if (result == null)
         {
-            this.LogError(
+            this.LogDebug(
                 "Failed to deserialize office response from endpoint {Endpoint}",
                 endpoint);
 

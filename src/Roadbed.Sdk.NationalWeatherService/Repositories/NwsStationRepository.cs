@@ -65,14 +65,14 @@ internal sealed class NwsStationRepository
 
             if (string.IsNullOrEmpty(response.HttpStatusCodeDescription))
             {
-                this.LogError(
+                this.LogDebug(
                     "API request failed for endpoint {Endpoint}. Status: {StatusCode}",
                     endpoint,
                     response.HttpStatusCode);
             }
             else
             {
-                this.LogError(
+                this.LogDebug(
                     "API request failed for endpoint {Endpoint}. Status: {StatusCode} - {StatusDescription}",
                     endpoint,
                     response.HttpStatusCode,
@@ -88,7 +88,7 @@ internal sealed class NwsStationRepository
 
         if (result == null)
         {
-            this.LogError(
+            this.LogDebug(
                 "Failed to deserialize station response from endpoint {Endpoint}",
                 endpoint);
 

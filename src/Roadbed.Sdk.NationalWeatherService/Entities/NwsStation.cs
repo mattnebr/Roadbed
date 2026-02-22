@@ -208,25 +208,25 @@ public sealed class NwsStation
     {
         if (response == null)
         {
-            this.LogWarning("Unable to map station response for ID {StationId}: response is null", this.Id ?? "unknown");
+            this.LogDebug("Unable to map station response for ID {StationId}: response is null", this.Id ?? "unknown");
             return;
         }
 
         if (response.Properties == null)
         {
-            this.LogWarning("Unable to map station response for ID {StationId}: properties is null", this.Id ?? "unknown");
+            this.LogDebug("Unable to map station response for ID {StationId}: properties is null", this.Id ?? "unknown");
             return;
         }
 
         if (response.Geometry == null)
         {
-            this.LogWarning("Unable to map station response for ID {StationId}: geometry is null", this.Id ?? "unknown");
+            this.LogDebug("Unable to map station response for ID {StationId}: geometry is null", this.Id ?? "unknown");
             return;
         }
 
         if (response.Geometry.Coordinates == null || response.Geometry.Coordinates.Length != 2)
         {
-            this.LogWarning(
+            this.LogDebug(
                 "Unable to map station response for ID {StationId}: invalid coordinates",
                 this.Id ?? "unknown");
             return;

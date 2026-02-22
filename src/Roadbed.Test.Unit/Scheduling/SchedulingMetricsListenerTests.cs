@@ -205,7 +205,7 @@ public class SchedulingMetricsListenerTests
     /// </summary>
     /// <returns>A task that represents the asynchronous test operation.</returns>
     [TestMethod]
-    public async Task JobToBeExecuted_MetricsThrows_LogsWarning()
+    public async Task JobToBeExecuted_MetricsThrows_LogsDebug()
     {
         // Arrange (Given)
         var mockMetrics = new Mock<ISchedulingMetrics>();
@@ -223,13 +223,13 @@ public class SchedulingMetricsListenerTests
         // Assert (Then)
         mockLogger.Verify(
             x => x.Log(
-                LogLevel.Warning,
+                LogLevel.Debug,
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((v, t) => true),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once,
-            "JobToBeExecuted should log warning when metrics throws exception.");
+            "JobToBeExecuted should log debug when metrics throws exception.");
     }
 
     /// <summary>

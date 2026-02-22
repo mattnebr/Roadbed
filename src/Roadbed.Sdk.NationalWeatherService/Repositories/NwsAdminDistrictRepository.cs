@@ -134,14 +134,14 @@ internal sealed class NwsAdminDistrictRepository
 
             if (string.IsNullOrEmpty(response.HttpStatusCodeDescription))
             {
-                this.LogError(
+                this.LogDebug(
                     "API request failed for endpoint {Endpoint}. Status: {StatusCode}",
                     pageEndpoint,
                     response.HttpStatusCode);
             }
             else
             {
-                this.LogError(
+                this.LogDebug(
                     "API request failed for endpoint {Endpoint}. Status: {StatusCode} - {StatusDescription}",
                     pageEndpoint,
                     response.HttpStatusCode,
@@ -163,13 +163,13 @@ internal sealed class NwsAdminDistrictRepository
 
         if (result == null)
         {
-            this.LogWarning("Received null response from API endpoint {Endpoint}", pageEndpoint);
+            this.LogDebug("Received null response from API endpoint {Endpoint}", pageEndpoint);
             return string.Empty;
         }
 
         if (result.Features == null)
         {
-            this.LogWarning("Received response with null Features from API endpoint {Endpoint}", pageEndpoint);
+            this.LogDebug("Received response with null Features from API endpoint {Endpoint}", pageEndpoint);
             return string.Empty;
         }
 
@@ -190,7 +190,7 @@ internal sealed class NwsAdminDistrictRepository
             }
             else
             {
-                this.LogWarning("Failed to map station feature to entity");
+                this.LogDebug("Failed to map station feature to entity");
             }
         }
 

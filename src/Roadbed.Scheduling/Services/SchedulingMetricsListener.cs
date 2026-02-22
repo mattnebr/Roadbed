@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 /// <remarks>
 /// Captures job lifecycle events and delegates to configured metrics implementation.
 /// Ensures metrics failures never break job execution by wrapping all metrics calls
-/// in try-catch blocks that log warnings instead of propagating exceptions.
+/// in try-catch blocks that log debug diagnostics instead of propagating exceptions.
 /// Uses high-precision timing with Stopwatch.GetTimestamp for accurate duration measurement.
 /// Thread-safe as each job execution receives its own context instance.
 /// Note: Misfire events are not captured by this listener as they occur at the trigger level,
@@ -77,7 +77,7 @@ internal sealed class SchedulingMetricsListener : JobListenerSupport
         catch (Exception ex)
         {
             // Never let metrics break job execution
-            this._logger.LogWarning(
+            this._logger.LogDebug(
                 ex,
                 "Failed to record job start metrics for {JobName}",
                 context.JobDetail.Key.Name);
@@ -113,7 +113,7 @@ internal sealed class SchedulingMetricsListener : JobListenerSupport
         }
         catch (Exception ex)
         {
-            this._logger.LogWarning(
+            this._logger.LogDebug(
                 ex,
                 "Failed to record job completion metrics for {JobName}",
                 context.JobDetail.Key.Name);

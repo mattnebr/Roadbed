@@ -66,7 +66,7 @@ public class SchedulingScheduledJobsSummaryJob
             scheduler,
             cancellationToken);
 
-        this.LogInformation("{JobsSummary}", summary.ToString());
+        this.LogDebug("{JobsSummary}", summary.ToString());
         this.LogDebug("Completed scheduled jobs summary. Total jobs: {TotalJobs}", totalJobs);
     }
 

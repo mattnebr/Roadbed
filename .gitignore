@@ -1,8 +1,9 @@
-## Obsidian 
-## 
-## Get latest from https://publish.obsidian.md/git-doc/Tips-and-Tricks
+## Anthropic 
+# Exclude all settings
+.claude/
 
-# Exclude all settings (including plugin and hotkey configurations)
+## Obsidian 
+# Exclude all settings
 .obsidian/
 
 ## Ignore Visual Studio temporary files, build results, and

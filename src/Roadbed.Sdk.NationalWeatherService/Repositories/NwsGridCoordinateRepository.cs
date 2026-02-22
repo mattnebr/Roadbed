@@ -70,14 +70,14 @@ internal sealed class NwsGridCoordinateRepository
 
             if (string.IsNullOrEmpty(response.HttpStatusCodeDescription))
             {
-                this.LogError(
+                this.LogDebug(
                     "API request failed for endpoint {Endpoint}. Status: {StatusCode}",
                     endpoint,
                     response.HttpStatusCode);
             }
             else
             {
-                this.LogError(
+                this.LogDebug(
                     "API request failed for endpoint {Endpoint}. Status: {StatusCode} - {StatusDescription}",
                     endpoint,
                     response.HttpStatusCode,
@@ -93,7 +93,7 @@ internal sealed class NwsGridCoordinateRepository
 
         if (result == null)
         {
-            this.LogError(
+            this.LogDebug(
                 "Failed to deserialize grid coordinate response from endpoint {Endpoint}",
                 endpoint);
 

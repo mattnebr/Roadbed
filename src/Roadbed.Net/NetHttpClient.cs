@@ -102,7 +102,7 @@ public class NetHttpClient
                     }
                     catch (JsonException ex)
                     {
-                        this.LogError(
+                        this.LogDebug(
                             ex,
                             "Failed to deserialize response from {Endpoint} to {Type}",
                             request.HttpEndPoint?.ToString() ?? "unknown",
@@ -129,7 +129,7 @@ public class NetHttpClient
         }
         catch (SocketException ex)
         {
-            this.LogError(
+            this.LogDebug(
                 ex,
                 "Socket error calling {Endpoint}",
                 request.HttpEndPoint?.ToString() ?? "unknown");
@@ -141,7 +141,7 @@ public class NetHttpClient
         }
         catch (Exception ex)
         {
-            this.LogError(
+            this.LogDebug(
                 ex,
                 "Unexpected error calling {Endpoint}",
                 request.HttpEndPoint?.ToString() ?? "unknown");
@@ -296,7 +296,7 @@ public class NetHttpClient
                             // Don't retry on last attempt
                             if (attempt < request.RetryPattern.MaxAttempts)
                             {
-                                this.LogWarning(
+                                this.LogDebug(
                                     "HTTP {StatusCode} from {Endpoint}, attempt {Attempt} of {TotalAttempts}, retrying after backoff",
                                     (int)response.StatusCode,
                                     request.HttpEndPoint?.ToString() ?? "unknown",
@@ -308,7 +308,7 @@ public class NetHttpClient
                             }
 
                             // Last attempt with retriable status code, fall through to return below
-                            this.LogError(
+                            this.LogWarning(
                                 "All retry attempts exhausted for {Method} {Endpoint}, last status {StatusCode}",
                                 request.Method,
                                 request.HttpEndPoint?.ToString() ?? "unknown",
@@ -326,7 +326,7 @@ public class NetHttpClient
                     // Networking issue occurred - retry if attempts remain
                     if (attempt < request.RetryPattern.MaxAttempts)
                     {
-                        this.LogWarning(
+                        this.LogDebug(
                             ex,
                             "Network error calling {Endpoint}, attempt {Attempt} of {TotalAttempts}, retrying after backoff",
                             request.HttpEndPoint?.ToString() ?? "unknown",
@@ -338,7 +338,7 @@ public class NetHttpClient
                     }
 
                     // No more attempts, fall through to return BadRequest below
-                    this.LogError(
+                    this.LogWarning(
                         ex,
                         "All retry attempts exhausted for {Method} {Endpoint} due to network error",
                         request.Method,
@@ -351,7 +351,7 @@ public class NetHttpClient
                     // Task timeout occurred - retry if attempts remain
                     if (attempt < request.RetryPattern.MaxAttempts)
                     {
-                        this.LogWarning(
+                        this.LogDebug(
                             ex,
                             "Timeout calling {Endpoint}, attempt {Attempt} of {TotalAttempts}, retrying after backoff",
                             request.HttpEndPoint?.ToString() ?? "unknown",
@@ -363,7 +363,7 @@ public class NetHttpClient
                     }
 
                     // No more attempts, fall through to return BadRequest below
-                    this.LogError(
+                    this.LogWarning(
                         ex,
                         "All retry attempts exhausted for {Method} {Endpoint} due to timeout",
                         request.Method?.ToString() ?? "unknown",
@@ -396,7 +396,7 @@ public class NetHttpClient
         HttpRequestException ex,
         NetHttpRequest request)
     {
-        this.LogError(
+        this.LogDebug(
             ex,
             "Socket error calling {Endpoint}",
             request.HttpEndPoint?.ToString() ?? "unknown");

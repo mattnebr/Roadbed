@@ -217,9 +217,9 @@ public static class PostgresqlExecutor
 
                     if (attempt > 0)
                     {
-                        if (logger.IsEnabled(LogLevel.Information))
+                        if (logger.IsEnabled(LogLevel.Debug))
                         {
-                            logger.LogInformation(
+                            logger.LogDebug(
                                 "Command succeeded on attempt {Attempt}. Rows affected: {Rows}",
                                 attempt + 1,
                                 result);
@@ -236,9 +236,9 @@ public static class PostgresqlExecutor
 
                 var delay = CalculateDelay(request, attempt);
 
-                if (logger.IsEnabled(LogLevel.Warning))
+                if (logger.IsEnabled(LogLevel.Debug))
                 {
-                    logger.LogWarning(
+                    logger.LogDebug(
                         "Transient error on attempt {Attempt}: {SqlState} - {Message}. Retrying in {DelayMs}ms...",
                         attempt,
                         ex.SqlState,
@@ -293,9 +293,9 @@ public static class PostgresqlExecutor
 
                     if (attempt > 0)
                     {
-                        if (logger.IsEnabled(LogLevel.Information))
+                        if (logger.IsEnabled(LogLevel.Debug))
                         {
-                            logger.LogInformation(
+                            logger.LogDebug(
                                 "Query succeeded on attempt {Attempt}. Rows returned: {Count}",
                                 attempt + 1,
                                 result.Count());
@@ -312,9 +312,9 @@ public static class PostgresqlExecutor
 
                 var delay = CalculateDelay(request, attempt);
 
-                if (logger.IsEnabled(LogLevel.Warning))
+                if (logger.IsEnabled(LogLevel.Debug))
                 {
-                    logger.LogWarning(
+                    logger.LogDebug(
                         "Transient error on attempt {Attempt}: {SqlState} - {Message}. Retrying in {DelayMs}ms...",
                         attempt,
                         ex.SqlState,
@@ -369,9 +369,9 @@ public static class PostgresqlExecutor
 
                     if (attempt > 0)
                     {
-                        if (logger.IsEnabled(LogLevel.Information))
+                        if (logger.IsEnabled(LogLevel.Debug))
                         {
-                            logger.LogInformation(
+                            logger.LogDebug(
                                 "Query succeeded on attempt {Attempt}. Result: {Found}",
                                 attempt + 1,
                                 !Equals(result, default(T)) ? "found" : "not found");
@@ -388,9 +388,9 @@ public static class PostgresqlExecutor
 
                 var delay = CalculateDelay(request, attempt);
 
-                if (logger.IsEnabled(LogLevel.Warning))
+                if (logger.IsEnabled(LogLevel.Debug))
                 {
-                    logger.LogWarning(
+                    logger.LogDebug(
                         "Transient error on attempt {Attempt}: {SqlState} - {Message}. Retrying in {DelayMs}ms...",
                         attempt,
                         ex.SqlState,
@@ -445,9 +445,9 @@ public static class PostgresqlExecutor
 
                     if (attempt > 0)
                     {
-                        if (logger.IsEnabled(LogLevel.Information))
+                        if (logger.IsEnabled(LogLevel.Debug))
                         {
-                            logger.LogInformation(
+                            logger.LogDebug(
                                 "Query succeeded on attempt {Attempt}. Scalar result: {Result}",
                                 attempt + 1,
                                 result);
@@ -464,9 +464,9 @@ public static class PostgresqlExecutor
 
                 var delay = CalculateDelay(request, attempt);
 
-                if (logger.IsEnabled(LogLevel.Warning))
+                if (logger.IsEnabled(LogLevel.Debug))
                 {
-                    logger.LogWarning(
+                    logger.LogDebug(
                         "Transient error on attempt {Attempt}: {SqlState} - {Message}. Retrying in {DelayMs}ms...",
                         attempt,
                         ex.SqlState,

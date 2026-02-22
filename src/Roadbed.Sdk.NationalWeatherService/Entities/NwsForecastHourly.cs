@@ -178,19 +178,19 @@ public sealed class NwsForecastHourly
     {
         if (response == null)
         {
-            this.LogWarning("Unable to map hourly forecast response: response is null");
+            this.LogDebug("Unable to map hourly forecast response: response is null");
             return;
         }
 
         if (response.Properties == null)
         {
-            this.LogWarning("Unable to map hourly forecast response: properties is null");
+            this.LogDebug("Unable to map hourly forecast response: properties is null");
             return;
         }
 
         if (response.Properties.Periods == null)
         {
-            this.LogWarning("Unable to map hourly forecast response: periods is null");
+            this.LogDebug("Unable to map hourly forecast response: periods is null");
             return;
         }
 

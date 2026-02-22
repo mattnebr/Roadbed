@@ -40,7 +40,7 @@ public class LoggingMetricsAdapterTests
     {
         // Arrange (Given)
         var mockLogger = new Mock<ILogger<LoggingMetricsAdapter>>();
-        mockLogger.Setup(x => x.IsEnabled(LogLevel.Information)).Returns(true);
+        mockLogger.Setup(x => x.IsEnabled(LogLevel.Debug)).Returns(true);
 
         var adapter = new LoggingMetricsAdapter(mockLogger.Object);
         var info = new JobExecutionInfo
@@ -58,13 +58,13 @@ public class LoggingMetricsAdapterTests
         // Assert (Then)
         mockLogger.Verify(
             x => x.Log(
-                LogLevel.Information,
+                LogLevel.Debug,
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((v, t) => true),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once,
-            "JobStarted should log at Information level.");
+            "JobStarted should log at Debug level.");
     }
 
     /// <summary>
@@ -75,7 +75,7 @@ public class LoggingMetricsAdapterTests
     {
         // Arrange (Given)
         var mockLogger = new Mock<ILogger<LoggingMetricsAdapter>>();
-        mockLogger.Setup(x => x.IsEnabled(LogLevel.Information)).Returns(true);
+        mockLogger.Setup(x => x.IsEnabled(LogLevel.Debug)).Returns(true);
 
         var adapter = new LoggingMetricsAdapter(mockLogger.Object);
         var info = new JobExecutionInfo
@@ -95,13 +95,13 @@ public class LoggingMetricsAdapterTests
         // Assert (Then)
         mockLogger.Verify(
             x => x.Log(
-                LogLevel.Information,
+                LogLevel.Debug,
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((v, t) => true),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once,
-            "JobCompleted should log at Information level when ResultMessage is present.");
+            "JobCompleted should log at Debug level when ResultMessage is present.");
     }
 
     /// <summary>
@@ -112,7 +112,7 @@ public class LoggingMetricsAdapterTests
     {
         // Arrange (Given)
         var mockLogger = new Mock<ILogger<LoggingMetricsAdapter>>();
-        mockLogger.Setup(x => x.IsEnabled(LogLevel.Information)).Returns(true);
+        mockLogger.Setup(x => x.IsEnabled(LogLevel.Debug)).Returns(true);
 
         var adapter = new LoggingMetricsAdapter(mockLogger.Object);
         var info = new JobExecutionInfo
@@ -132,13 +132,13 @@ public class LoggingMetricsAdapterTests
         // Assert (Then)
         mockLogger.Verify(
             x => x.Log(
-                LogLevel.Information,
+                LogLevel.Debug,
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((v, t) => true),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once,
-            "JobCompleted should log at Information level even without ResultMessage.");
+            "JobCompleted should log at Debug level even without ResultMessage.");
     }
 
     /// <summary>
@@ -149,7 +149,7 @@ public class LoggingMetricsAdapterTests
     {
         // Arrange (Given)
         var mockLogger = new Mock<ILogger<LoggingMetricsAdapter>>();
-        mockLogger.Setup(x => x.IsEnabled(LogLevel.Error)).Returns(true);
+        mockLogger.Setup(x => x.IsEnabled(LogLevel.Warning)).Returns(true);
 
         var adapter = new LoggingMetricsAdapter(mockLogger.Object);
         var info = new JobExecutionInfo
@@ -170,13 +170,13 @@ public class LoggingMetricsAdapterTests
         // Assert (Then)
         mockLogger.Verify(
             x => x.Log(
-                LogLevel.Error,
+                LogLevel.Warning,
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((v, t) => true),
                 It.Is<Exception>(ex => ex == exception),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once,
-            "JobFailed should log at Error level with exception when ResultMessage is present.");
+            "JobFailed should log at Warning level with exception when ResultMessage is present.");
     }
 
     /// <summary>
@@ -187,7 +187,7 @@ public class LoggingMetricsAdapterTests
     {
         // Arrange (Given)
         var mockLogger = new Mock<ILogger<LoggingMetricsAdapter>>();
-        mockLogger.Setup(x => x.IsEnabled(LogLevel.Error)).Returns(true);
+        mockLogger.Setup(x => x.IsEnabled(LogLevel.Warning)).Returns(true);
 
         var adapter = new LoggingMetricsAdapter(mockLogger.Object);
         var info = new JobExecutionInfo
@@ -208,13 +208,13 @@ public class LoggingMetricsAdapterTests
         // Assert (Then)
         mockLogger.Verify(
             x => x.Log(
-                LogLevel.Error,
+                LogLevel.Warning,
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((v, t) => true),
                 It.Is<Exception>(ex => ex == exception),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once,
-            "JobFailed should log at Error level with exception even without ResultMessage.");
+            "JobFailed should log at Warning level with exception even without ResultMessage.");
     }
 
     /// <summary>

@@ -197,13 +197,13 @@ public sealed class NwsForecastRequest
     {
         if (response == null)
         {
-            this.LogWarning("Unable to map grid coordinate response: response is null");
+            this.LogDebug("Unable to map grid coordinate response: response is null");
             return;
         }
 
         if (response.Properties == null)
         {
-            this.LogWarning("Unable to map grid coordinate response: properties is null");
+            this.LogDebug("Unable to map grid coordinate response: properties is null");
             return;
         }
 

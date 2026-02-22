@@ -165,6 +165,27 @@ public abstract class BaseClassWithLogging
     }
 
     /// <summary>
+    /// Logs an exception with a severity level of <see cref="LogLevel.Debug"/>.
+    /// </summary>
+    /// <param name="exception">Exception to log.</param>
+    /// <param name="message">Message to log.</param>
+    public void LogDebug(Exception exception, string message)
+    {
+        this._logger.LogDebug(exception, message);
+    }
+
+    /// <summary>
+    /// Logs an exception with a severity level of <see cref="LogLevel.Debug"/>.
+    /// </summary>
+    /// <param name="exception">Exception to log.</param>
+    /// <param name="message">Message to log.</param>
+    /// <param name="param">Message parameters.</param>
+    public void LogDebug(Exception exception, string message, params object[] param)
+    {
+        this._logger.LogDebug(exception, message, param);
+    }
+
+    /// <summary>
     /// Logs a message with a severity level of <see cref="LogLevel.Error"/>.
     /// </summary>
     /// <param name="message">Message to log.</param>

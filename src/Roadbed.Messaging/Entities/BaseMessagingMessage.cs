@@ -15,6 +15,25 @@ public abstract class BaseMessagingMessage<T>
     #region Public Constructors
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="BaseMessagingMessage{T}"/> class with default
+    /// values suitable for deserialization.
+    /// </summary>
+    /// <remarks>
+    /// Required so that <see cref="Newtonsoft.Json.JsonConvert.DeserializeObject{T}(string)"/> can
+    /// instantiate concrete subclasses without ambiguity over which parameterized constructor to use.
+    /// <see cref="Publisher"/> is initialized to <see langword="null"/> via the null-forgiving operator;
+    /// the deserializer is expected to populate it from the JSON immediately after construction.
+    /// Code paths that do not deserialize must use one of the parameterized constructors instead.
+    /// </remarks>
+    protected BaseMessagingMessage()
+    {
+        this.Publisher = null!;
+        this.Identifier = Ulid.NewUlid().ToString();
+        this.SourceCreatedOn = DateTimeOffset.UtcNow;
+        this.CreatedOn = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="BaseMessagingMessage{T}"/> class.
     /// </summary>
     /// <param name="publisher">Publisher for the message.</param>

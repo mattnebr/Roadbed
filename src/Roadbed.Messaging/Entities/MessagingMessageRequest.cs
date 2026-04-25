@@ -14,6 +14,20 @@ public class MessagingMessageRequest<T>
     #region Public Constructors
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="MessagingMessageRequest{T}"/> class with
+    /// default values suitable for deserialization.
+    /// </summary>
+    /// <remarks>
+    /// Required so that <see cref="Newtonsoft.Json.JsonConvert.DeserializeObject{T}(string)"/> can
+    /// instantiate this type without ambiguity over which parameterized constructor to use.
+    /// Application code that publishes new messages should use one of the parameterized constructors
+    /// instead.
+    /// </remarks>
+    public MessagingMessageRequest()
+    {
+    }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="MessagingMessageRequest{T}"/> class.
     /// </summary>
     /// <param name="publisher">Publisher for the event.</param>

@@ -5,6 +5,7 @@ using System.Linq;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Quartz;
+using Roadbed.Data;
 using Roadbed.Scheduling.Services;
 
 /// <summary>
@@ -34,11 +35,54 @@ public class InstallScheduling : IServiceCollectionInstaller
         // Discover and register all ISchedulingJob implementations
         RegisterSchedulingJobs(services);
 
+        // Resolve persistence options + (when persistent) the database factory
+        // from DI BEFORE entering the AddQuartz lambda. Roadbed.Scheduling does
+        // not read configuration directly — the host is expected to have
+        // registered SchedulingPersistenceOptions and (when Mode is Persistent)
+        // an ISchedulingDatabaseFactory as singletons. Falling back to a
+        // default SchedulingPersistenceOptions preserves the previous
+        // out-of-box behavior of using Quartz's in-memory store.
+        SchedulingPersistenceOptions persistence;
+        ISchedulingDatabaseFactory? schedulingFactory = null;
+        using (var setupProvider = services.BuildServiceProvider())
+        {
+            persistence = setupProvider.GetService<SchedulingPersistenceOptions>()
+                          ?? new SchedulingPersistenceOptions();
+
+            if (persistence.Mode == SchedulingPersistenceMode.Persistent)
+            {
+                schedulingFactory = setupProvider.GetService<ISchedulingDatabaseFactory>()
+                    ?? throw new InvalidOperationException(
+                        $"SchedulingPersistenceOptions.Mode is " +
+                        $"'{nameof(SchedulingPersistenceMode.Persistent)}' but no " +
+                        $"{nameof(ISchedulingDatabaseFactory)} is registered. " +
+                        $"Register a concrete factory pointing at the Quartz schema " +
+                        $"before calling InstallModulesInAppDomain, or switch Mode to " +
+                        $"'{nameof(SchedulingPersistenceMode.InMemory)}'.");
+            }
+        }
+
         // Configure Quartz.NET
         services.AddQuartz(q =>
         {
-            // Use in-memory job store
-            q.UseInMemoryStore();
+            q.SchedulerName = persistence.SchedulerName;
+
+            // Select the job store based on the resolved persistence options.
+            switch (persistence.Mode)
+            {
+                case SchedulingPersistenceMode.InMemory:
+                    q.UseInMemoryStore();
+                    break;
+
+                case SchedulingPersistenceMode.Persistent:
+                    ConfigurePersistentStore(q, schedulingFactory!, persistence);
+                    break;
+
+                default:
+                    throw new InvalidOperationException(
+                        $"Unknown {nameof(SchedulingPersistenceMode)} value: " +
+                        $"'{persistence.Mode}'.");
+            }
 
             // Add metrics listener
             q.AddJobListener<SchedulingMetricsListener>();
@@ -256,6 +300,81 @@ public class InstallScheduling : IServiceCollectionInstaller
                 }
             });
         }
+    }
+
+    /// <summary>
+    /// Configures Quartz's persistent (AdoJobStore) backend by dispatching to
+    /// the appropriate provider-specific fluent method based on the connection
+    /// factory's <see cref="DataConnectionStringType"/>.
+    /// </summary>
+    /// <param name="configurator">Quartz service collection configurator.</param>
+    /// <param name="factory">Host-registered Quartz database connection factory.</param>
+    /// <param name="persistence">Resolved persistence options.</param>
+    /// <remarks>
+    /// Roadbed.Scheduling does not reference any ADO.NET driver package
+    /// (MySqlConnector, Npgsql, Microsoft.Data.Sqlite). Quartz's provider-
+    /// specific extension methods (UseMySqlConnector / UsePostgres / UseSQLite)
+    /// are all built into the main Quartz package and load the actual driver
+    /// assembly reflectively at runtime. The driver must be present in the
+    /// host process — typically supplied transitively by the host's reference
+    /// to the matching Roadbed.Data.* project.
+    /// </remarks>
+    private static void ConfigurePersistentStore(
+        IServiceCollectionQuartzConfigurator configurator,
+        ISchedulingDatabaseFactory factory,
+        SchedulingPersistenceOptions persistence)
+    {
+        var connection = factory.Connecion;
+        var connectionString = connection.ConnectionString;
+        var connectionType = connection.ConnectionStringType;
+
+        configurator.UsePersistentStore(store =>
+        {
+            // UseProperties=true forces JobDataMap entries to be strings,
+            // sidestepping the need to register a serializer (Quartz's
+            // default binary serializer is deprecated; JSON serializers
+            // ship in separate NuGet packages we don't want to take on
+            // just for this feature).
+            store.UseProperties = true;
+            store.RetryInterval = TimeSpan.FromSeconds(15);
+
+            // TablePrefix is not a CLR property on PersistentStoreOptions
+            // in Quartz 3.18; it has to be set via the raw Quartz property
+            // key. This is the same value Quartz's own DDL scripts use.
+            store.SetProperty("quartz.jobStore.tablePrefix", persistence.TablePrefix);
+
+            if (persistence.IsClustered)
+            {
+                store.UseClustering();
+            }
+
+            switch (connectionType)
+            {
+                case DataConnectionStringType.MySQL:
+                    store.UseMySqlConnector(c => c.ConnectionString = connectionString);
+                    break;
+
+                case DataConnectionStringType.PostgreSQL:
+                    store.UsePostgres(c => c.ConnectionString = connectionString);
+                    break;
+
+                case DataConnectionStringType.SQLite:
+                    store.UseMicrosoftSQLite(c => c.ConnectionString = connectionString);
+                    break;
+
+                case DataConnectionStringType.SQLiteInMemory:
+                    throw new InvalidOperationException(
+                        $"SQLite in-memory cannot back a Quartz persistent store " +
+                        $"(state would not survive the connection lifetime). " +
+                        $"Use {nameof(SchedulingPersistenceMode)}." +
+                        $"{nameof(SchedulingPersistenceMode.InMemory)} instead.");
+
+                default:
+                    throw new InvalidOperationException(
+                        $"Quartz persistent storage is not supported for " +
+                        $"{nameof(DataConnectionStringType)} '{connectionType}'.");
+            }
+        });
     }
 
     /// <summary>

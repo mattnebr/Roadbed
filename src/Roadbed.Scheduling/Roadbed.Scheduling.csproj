@@ -52,6 +52,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Roadbed.Common\Roadbed.Common.csproj" />
+    <ProjectReference Include="..\Roadbed.Data\Roadbed.Data.csproj" />
   </ItemGroup>
 
 </Project>

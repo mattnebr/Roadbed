@@ -1,0 +1,16 @@
+-- Roadbed.Logging :: activity_input (SQLite)
+--
+-- Lineage DAG: "this activity consumed the output of those upstream
+-- activities." Soft reference to activity.id on both columns.
+--
+-- Substitute the literal token {SchemaPrefix} before executing.
+
+CREATE TABLE {SchemaPrefix}activity_input (
+     activity_id        TEXT     NOT NULL COLLATE BINARY
+    ,input_activity_id  TEXT     NOT NULL COLLATE BINARY
+    ,input_role         TEXT     NULL
+    ,created_on         DATETIME NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    ,PRIMARY KEY (activity_id, input_activity_id)
+);
+
+CREATE INDEX idx_activity_input_reverse ON {SchemaPrefix}activity_input (input_activity_id);

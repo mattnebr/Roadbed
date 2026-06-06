@@ -16,7 +16,9 @@ Roadbed provides a cohesive set of libraries that work together to accelerate de
 - **Standardized Messaging** - Consistent message envelopes for event-driven architectures
 - **Data Access Abstractions** - Database-agnostic interfaces with SQLite implementation
 - **Base Classes with Logging** - Performance-optimized logging built into base classes
-- **Job Scheduling** - Automatic job discovery and scheduling with Quartz.NET
+- **Job Scheduling** - Automatic job discovery and scheduling with Quartz.NET, including persistent / clustered backends
+- **OpenTelemetry-First Logging** - Structured MEL output persisted to MySQL/SQLite, with first-class activity/run-instance and lineage tracking
+- **KeePass-Backed Secrets** - Self-contained `.kdbx` reader for surfacing secrets into typed options at startup
 - **File I/O Utilities** - Type-safe CSV operations with custom mappers
 - **SDK Development Tools** - Patterns for building type-safe API client libraries
 
@@ -60,6 +62,7 @@ For detailed documentation on each package:
 - [Roadbed.Data.MySql](/src/Roadbed.Data.MySql/README.md) - MySQL data access
 - [Roadbed.Data.Sqlite](/src/Roadbed.Data.Sqlite/README.md) - SQLite data access
 - [Roadbed.IO](/src/Roadbed.IO/README.md) - File I/O and CSV operations
+- [Roadbed.Logging](/src/Roadbed.Logging/README.md) - OpenTelemetry-backed MEL-to-database logging and activity/run-instance/lineage tracking
 - [Roadbed.Messaging](/src/Roadbed.Messaging/README.md) - Message envelopes
 - [Roadbed.Net](/src/Roadbed.Net/README.md) - HTTP client wrapper
 - [Roadbed.Scheduling](/src/Roadbed.Scheduling/README.md) - Job scheduling

@@ -1,0 +1,52 @@
+-- Roadbed.Logging :: activity (MySQL / MariaDB)
+--
+-- Substitute the literal token {SchemaPrefix} before executing:
+--   * empty string (default)                       -> tables are unqualified
+--   * a database name followed by a dot (e.g. ops.) -> tables are qualified
+--
+-- ULID, trace, and span columns use ascii_bin so lexical order equals
+-- chronological order and identifier comparisons are case-sensitive.
+-- The activity row is mutable: ON UPDATE CURRENT_TIMESTAMP maintains
+-- last_modified_on automatically.
+
+CREATE TABLE {SchemaPrefix}activity (
+     id                    CHAR(26) CHARACTER SET ascii COLLATE ascii_bin NOT NULL
+    ,parent_activity_id    CHAR(26) CHARACTER SET ascii COLLATE ascii_bin NULL
+    ,root_activity_id      CHAR(26) CHARACTER SET ascii COLLATE ascii_bin NULL
+    ,trace_id              CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NULL
+    ,span_id               CHAR(16) CHARACTER SET ascii COLLATE ascii_bin NULL
+    ,activity_key          VARCHAR(100)  NULL
+    ,application           VARCHAR(100)  NOT NULL
+    ,environment           VARCHAR(20)   NULL
+    ,activity_type         VARCHAR(50)   NOT NULL
+    ,target                VARCHAR(255)  NULL
+    ,status                ENUM('pending','running','succeeded','failed','canceled','skipped') NOT NULL DEFAULT 'pending'
+    ,started_on            DATETIME(6)   NULL
+    ,completed_on          DATETIME(6)   NULL
+    ,last_heartbeat_on     DATETIME(6)   NULL
+    ,records_impacted      BIGINT UNSIGNED NULL
+    ,parameters            JSON          NULL
+    ,metrics               JSON          NULL
+    ,error                 TEXT          NULL
+    ,error_type            VARCHAR(255)  NULL
+    ,scheduler_instance_id VARCHAR(200)  NULL
+    ,fire_instance_id      VARCHAR(95)   NULL
+    ,quartz_job_name       VARCHAR(200)  NULL
+    ,quartz_job_group      VARCHAR(200)  NULL
+    ,quartz_trigger_name   VARCHAR(200)  NULL
+    ,quartz_trigger_group  VARCHAR(200)  NULL
+    ,host                  VARCHAR(255)  NULL
+    ,process_id            INT           NULL
+    ,created_by            BIGINT UNSIGNED NULL
+    ,created_on            DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+    ,last_modified_on      DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)
+    ,PRIMARY KEY (id)
+    ,KEY idx_activity_key (activity_key)
+    ,KEY idx_activity_parent (parent_activity_id)
+    ,KEY idx_activity_root (root_activity_id)
+    ,KEY idx_activity_trace (trace_id)
+    ,KEY idx_activity_app_started (application, started_on)
+    ,KEY idx_activity_type_started (activity_type, started_on)
+    ,KEY idx_activity_status (status)
+    ,KEY idx_activity_fire (fire_instance_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

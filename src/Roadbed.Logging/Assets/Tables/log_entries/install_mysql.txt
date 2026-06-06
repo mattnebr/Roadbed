@@ -1,0 +1,45 @@
+-- Roadbed.Logging :: log_entries (MySQL / MariaDB)
+--
+-- High-volume append-only log store. Each row carries its own originating
+-- activity_id sampled at log time (no uniform stamping). The composite
+-- primary key includes event_time_utc because MySQL requires every unique
+-- key to contain the partition key.
+--
+-- Partitioning is monthly RANGE on TO_DAYS(event_time_utc). Ship the
+-- partition-maintenance routine separately and run it on a monthly Quartz
+-- job to (a) pre-create next month's partition and (b) drop partitions
+-- whose range falls outside the retention window (90 days by default).
+--
+-- Substitute the literal token {SchemaPrefix} before executing.
+
+CREATE TABLE {SchemaPrefix}log_entries (
+     id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT
+    ,event_time_utc   DATETIME(6)   NOT NULL
+    ,recorded_on      DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+    ,log_level        TINYINT UNSIGNED NOT NULL
+    ,category         VARCHAR(255)  NOT NULL
+    ,event_id         INT           NULL
+    ,event_name       VARCHAR(255)  NULL
+    ,message          TEXT          NOT NULL
+    ,message_template TEXT          NULL
+    ,properties       JSON          NULL
+    ,exception        TEXT          NULL
+    ,exception_type   VARCHAR(255)  NULL
+    ,activity_id      CHAR(26) CHARACTER SET ascii COLLATE ascii_bin NULL
+    ,trace_id         CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NULL
+    ,span_id          CHAR(16) CHARACTER SET ascii COLLATE ascii_bin NULL
+    ,application      VARCHAR(100)  NOT NULL
+    ,environment      VARCHAR(20)   NULL
+    ,host             VARCHAR(255)  NULL
+    ,process_id       INT           NULL
+    ,PRIMARY KEY (id, event_time_utc)
+    ,KEY idx_log_activity (activity_id)
+    ,KEY idx_log_trace (trace_id)
+    ,KEY idx_log_app_time (application, event_time_utc)
+    ,KEY idx_log_level_time (log_level, event_time_utc)
+    ,KEY idx_log_time (event_time_utc)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+PARTITION BY RANGE (TO_DAYS(event_time_utc)) (
+     PARTITION p_min VALUES LESS THAN (TO_DAYS('2026-01-01'))
+    ,PARTITION pmax  VALUES LESS THAN MAXVALUE
+);

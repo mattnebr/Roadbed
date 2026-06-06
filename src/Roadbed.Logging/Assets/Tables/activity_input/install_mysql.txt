@@ -1,0 +1,15 @@
+-- Roadbed.Logging :: activity_input (MySQL / MariaDB)
+--
+-- Lineage DAG: "this activity consumed the output of those upstream
+-- activities." Soft reference to activity.id on both columns.
+--
+-- Substitute the literal token {SchemaPrefix} before executing.
+
+CREATE TABLE {SchemaPrefix}activity_input (
+     activity_id        CHAR(26) CHARACTER SET ascii COLLATE ascii_bin NOT NULL
+    ,input_activity_id  CHAR(26) CHARACTER SET ascii COLLATE ascii_bin NOT NULL
+    ,input_role         VARCHAR(50) NULL
+    ,created_on         DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+    ,PRIMARY KEY (activity_id, input_activity_id)
+    ,KEY idx_activity_input_reverse (input_activity_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

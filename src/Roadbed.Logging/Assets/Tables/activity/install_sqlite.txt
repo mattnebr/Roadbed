@@ -1,0 +1,54 @@
+-- Roadbed.Logging :: activity (SQLite)
+--
+-- Substitute the literal token {SchemaPrefix} before executing:
+--   * empty string (default)                              -> tables are unqualified
+--   * an attached-database alias followed by a dot         -> tables are qualified
+--
+-- ULID, trace, and span columns use COLLATE BINARY so lexical order equals
+-- chronological order and identifier comparisons are case-sensitive.
+-- last_modified_on must be maintained by the application; SQLite has no
+-- equivalent of MySQL's ON UPDATE CURRENT_TIMESTAMP.
+
+CREATE TABLE {SchemaPrefix}activity (
+     id                    TEXT     NOT NULL COLLATE BINARY
+    ,parent_activity_id    TEXT     NULL     COLLATE BINARY
+    ,root_activity_id      TEXT     NULL     COLLATE BINARY
+    ,trace_id              TEXT     NULL     COLLATE BINARY
+    ,span_id               TEXT     NULL     COLLATE BINARY
+    ,activity_key          TEXT     NULL
+    ,application           TEXT     NOT NULL
+    ,environment           TEXT     NULL
+    ,activity_type         TEXT     NOT NULL
+    ,target                TEXT     NULL
+    ,status                TEXT     NOT NULL DEFAULT 'pending'
+                           CHECK (status IN ('pending','running','succeeded','failed','canceled','skipped'))
+    ,started_on            DATETIME NULL
+    ,completed_on          DATETIME NULL
+    ,last_heartbeat_on     DATETIME NULL
+    ,records_impacted      INTEGER  NULL
+    ,parameters            TEXT     NULL
+    ,metrics               TEXT     NULL
+    ,error                 TEXT     NULL
+    ,error_type            TEXT     NULL
+    ,scheduler_instance_id TEXT     NULL
+    ,fire_instance_id      TEXT     NULL
+    ,quartz_job_name       TEXT     NULL
+    ,quartz_job_group      TEXT     NULL
+    ,quartz_trigger_name   TEXT     NULL
+    ,quartz_trigger_group  TEXT     NULL
+    ,host                  TEXT     NULL
+    ,process_id            INTEGER  NULL
+    ,created_by            INTEGER  NULL
+    ,created_on            DATETIME NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    ,last_modified_on      DATETIME NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    ,PRIMARY KEY (id)
+);
+
+CREATE INDEX idx_activity_key             ON {SchemaPrefix}activity (activity_key);
+CREATE INDEX idx_activity_parent          ON {SchemaPrefix}activity (parent_activity_id);
+CREATE INDEX idx_activity_root            ON {SchemaPrefix}activity (root_activity_id);
+CREATE INDEX idx_activity_trace           ON {SchemaPrefix}activity (trace_id);
+CREATE INDEX idx_activity_app_started     ON {SchemaPrefix}activity (application, started_on);
+CREATE INDEX idx_activity_type_started    ON {SchemaPrefix}activity (activity_type, started_on);
+CREATE INDEX idx_activity_status          ON {SchemaPrefix}activity (status);
+CREATE INDEX idx_activity_fire            ON {SchemaPrefix}activity (fire_instance_id);

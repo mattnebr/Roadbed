@@ -16,6 +16,7 @@
   <Project Path="Roadbed.Data/Roadbed.Data.csproj" Id="d44e4793-96f5-4e70-af87-563fe5e59fcd" />
   <Project Path="Roadbed.IO.Csv/Roadbed.IO.Csv.csproj" Id="238da2b2-8413-4867-b8a5-dbd7a940d36a" />
   <Project Path="Roadbed.IO/Roadbed.IO.csproj" Id="47cdeba4-d3b1-4656-95e7-4d7760daecdf" />
+  <Project Path="Roadbed.Logging/Roadbed.Logging.csproj" />
   <Project Path="Roadbed.Messaging/Roadbed.Messaging.csproj" Id="766c9d43-21ee-4320-8b00-57ad2291754f" />
   <Project Path="Roadbed.Net/Roadbed.Net.csproj" Id="b63606f8-9536-4835-afe5-220702504e0a" />
   <Project Path="Roadbed.Scheduling/Roadbed.Scheduling.csproj" Id="d403b137-054c-4f72-b6cc-e75b0798328f" />

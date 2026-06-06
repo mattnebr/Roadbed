@@ -1,0 +1,41 @@
+-- Roadbed.Logging :: log_entries (SQLite)
+--
+-- High-volume append-only log store. Each row carries its own originating
+-- activity_id sampled at log time (no uniform stamping).
+--
+-- SQLite has no native partitioning. Apply retention by running, on a
+-- monthly schedule:
+--   DELETE FROM {SchemaPrefix}log_entries
+--   WHERE event_time_utc < datetime('now', '-90 days');
+-- Follow with VACUUM (or pragma incremental_vacuum) if disk reclaim is
+-- desired.
+--
+-- Substitute the literal token {SchemaPrefix} before executing.
+
+CREATE TABLE {SchemaPrefix}log_entries (
+     id               INTEGER  NOT NULL PRIMARY KEY AUTOINCREMENT
+    ,event_time_utc   DATETIME NOT NULL
+    ,recorded_on      DATETIME NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    ,log_level        INTEGER  NOT NULL
+    ,category         TEXT     NOT NULL
+    ,event_id         INTEGER  NULL
+    ,event_name       TEXT     NULL
+    ,message          TEXT     NOT NULL
+    ,message_template TEXT     NULL
+    ,properties       TEXT     NULL
+    ,exception        TEXT     NULL
+    ,exception_type   TEXT     NULL
+    ,activity_id      TEXT     NULL COLLATE BINARY
+    ,trace_id         TEXT     NULL COLLATE BINARY
+    ,span_id          TEXT     NULL COLLATE BINARY
+    ,application      TEXT     NOT NULL
+    ,environment      TEXT     NULL
+    ,host             TEXT     NULL
+    ,process_id       INTEGER  NULL
+);
+
+CREATE INDEX idx_log_activity   ON {SchemaPrefix}log_entries (activity_id);
+CREATE INDEX idx_log_trace      ON {SchemaPrefix}log_entries (trace_id);
+CREATE INDEX idx_log_app_time   ON {SchemaPrefix}log_entries (application, event_time_utc);
+CREATE INDEX idx_log_level_time ON {SchemaPrefix}log_entries (log_level, event_time_utc);
+CREATE INDEX idx_log_time       ON {SchemaPrefix}log_entries (event_time_utc);

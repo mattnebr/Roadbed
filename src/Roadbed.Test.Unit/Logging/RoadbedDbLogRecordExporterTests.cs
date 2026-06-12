@@ -95,7 +95,7 @@ public class RoadbedDbLogRecordExporterTests
     /// <summary>
     /// Verifies that constructing the exporter does NOT invoke the channel
     /// accessor. The OTel processor factory must be able to instantiate the
-    /// exporter before <c>InstallLogging</c> has registered
+    /// exporter before <c>LoggingModule.Register</c> has registered
     /// <see cref="LoggingChannel"/>; lazy resolution defends against that
     /// build-order race.
     /// </summary>

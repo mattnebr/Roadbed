@@ -13,7 +13,7 @@ dependency on `Roadbed.Crud`** — its bulk-insert path is internal, custom, and
 stamps each row with its own originating `activity_id` rather than a uniform
 activity id like the CRUDALBT "B" tier.
 
-## Type catalog (17 types)
+## Type catalog
 
 | Group                       | Types                                                                                                  |
 | --------------------------- | ------------------------------------------------------------------------------------------------------ |
@@ -23,12 +23,15 @@ activity id like the CRUDALBT "B" tier.
 | Marker interface            | `ILoggingDatabaseFactory` (extends `IDataConnectionFactory`)                                            |
 | Service                     | `LoggingActivityService` (public sealed; dual ctor), `LoggingActivityScope` (IDisposable)               |
 | OTel pipeline               | `RoadbedDbLogRecordExporter`, `LogWriterHostedService`, `LoggingChannel`                                |
-| Wiring                      | `InstallLogging` (`IServiceCollectionInstaller`), `LoggingBuilderExtensions.AddRoadbedDbLogging`        |
+| Execution port              | `ILoggingDataExecutor` (internal; implemented by the provider satellites)                               |
+| Wiring (core)               | `LoggingModule.Register`, `LoggingBuilderExtensions.AddRoadbedDbLogging`                                |
+| Wiring (provider packages)  | `InstallLoggingMySql`, `InstallLoggingSqlite` (each an auto-discovered `IServiceCollectionInstaller`)   |
 
 ## MUST
 
-- **MUST** register a singleton `LoggingOptions` and a singleton `ILoggingDatabaseFactory` in DI **before** calling `services.InstallModulesInAppDomain(configuration)`. The installer resolves both up-front and throws if either is missing.
-- **MUST** call `builder.Logging.AddRoadbedDbLogging()` on the host's `ILoggingBuilder` to wire the OpenTelemetry MEL provider, the batch processor, and the database exporter. The `IServiceCollectionInstaller` does **not** see `ILoggingBuilder`, so this step lives outside `InstallLogging`.
+- **MUST** reference exactly **one** provider package — `Roadbed.Logging.MySql` **or** `Roadbed.Logging.Sqlite` — alongside the core `Roadbed.Logging`. The provider package carries the database client (MySqlConnector / Microsoft.Data.Sqlite) and ships the auto-discovered installer that selects the backend; core itself has no client dependency. Referencing neither leaves the pipeline unwired (a runtime resolution error); referencing both makes the active provider nondeterministic.
+- **MUST** register a singleton `LoggingOptions` and a singleton `ILoggingDatabaseFactory` in DI **before** calling `services.InstallModulesInAppDomain(configuration)`. The provider installer resolves both up-front and throws if either is missing.
+- **MUST** call `builder.Logging.AddRoadbedDbLogging()` on the host's `ILoggingBuilder` to wire the OpenTelemetry MEL provider, the synchronous processor, and the database exporter. The `IServiceCollectionInstaller` does **not** see `ILoggingBuilder`, so this step lives outside the provider installer.
 - **MUST** generate the activity ULID in the consuming application — Roadbed.Logging does **not** generate identifiers. Pass the same ULID you used for `IAsyncBulkInsertOperation.BulkInsertAsync` calls during the run.
 - **MUST** set `LoggingOptions.Application` (and ideally `Environment`) so every row carries identifying provenance. The exporter stamps these onto every `LoggingLogEntry`.
 - **MUST** set `LoggingOptions.Schema` to the MySQL database name (e.g. `"ops"`, `"platform"`) in production. The default is the empty string for SQLite-dev friendliness.
@@ -42,7 +45,7 @@ activity id like the CRUDALBT "B" tier.
 ## MUST NOT
 
 - **MUST NOT** reference `Roadbed.Crud` from a project that already takes `Roadbed.Logging`. The library is deliberately a peer, not a consumer, of the CRUD pattern.
-- **MUST NOT** point `ILoggingDatabaseFactory` at any `DataConnectionStringType` other than `MySQL`, `SQLite`, or `SQLiteInMemory`. The installer throws on every other value.
+- **MUST NOT** point `ILoggingDatabaseFactory` at a `DataConnectionStringType` that disagrees with the referenced provider package (e.g. a Postgres connection string with `Roadbed.Logging.Sqlite`). The provider executor binds one client; a mismatch fails at first query, not at install time.
 - **MUST NOT** rely on `LoggingActivityScope` to auto-finalize the activity row. Skipped, Canceled, and Succeeded outcomes are all distinct terminal states; the dispose path has no way to choose between them.
 - **MUST NOT** invent your own batching or retry layer around `LoggingActivityService` or the log-entry path — the background writer already batches, falls back to `Console.Error` on database error, and flushes on `StopAsync`.
 - **MUST NOT** log from a category that overlaps `LoggingOptions.RecursionGuardCategories` and expect the entry to be persisted. Categories under `Roadbed.Logging`, `Roadbed.Data`, `Roadbed.Data.MySql`, `Roadbed.Data.Sqlite`, and `MySqlConnector` are dropped to prevent the database write path from logging through itself.
@@ -51,7 +54,7 @@ activity id like the CRUDALBT "B" tier.
 - **MUST NOT** add a standalone `UNIQUE` on `activity.id` or any other partitioned-table single column. MySQL requires every unique key on a partitioned InnoDB table to contain the partition column, so the only PK is the composite one. Uniqueness of `activity.id` is guaranteed by the caller's ULID, not by a DB constraint.
 - **MUST NOT** add foreign keys between the three tables (or from them to anything else). Partitioned InnoDB tables cannot have FKs. The lineage edges in `activity_input` are soft references on purpose.
 - **MUST NOT** rely on the `last_modified_on` server-side `ON UPDATE` trigger to be UTC. The framework's UPDATE statements pass an explicit `@LastModifiedOn = DateTime.UtcNow` parameter that overrides the trigger. Custom queries that update the row outside the framework should do the same — or set the connection's session `time_zone` to `+00:00`.
-- **MUST NOT** re-register `LoggingChannel` in DI. `InstallLogging` registers it as a process-wide shared instance built from `LoggingOptions`; the host writer (in the host container) and every producer-side OTel exporter (in any container — host, `ServiceLocator` snapshot, or test fixture) all need to resolve the **same** object. Overwriting that registration in `Program.cs` (e.g. via `services.AddSingleton<LoggingChannel>(new LoggingChannel(...))`) is what creates the "`activity` rows write but `log_entries` stays empty" symptom.
+- **MUST NOT** re-register `LoggingChannel` in DI. `LoggingModule.Register` (invoked by the provider installer) registers it as a process-wide shared instance built from `LoggingOptions`; the host writer (in the host container) and every producer-side OTel exporter (in any container — host, `ServiceLocator` snapshot, or test fixture) all need to resolve the **same** object. Overwriting that registration in `Program.cs` (e.g. via `services.AddSingleton<LoggingChannel>(new LoggingChannel(...))`) is what creates the "`activity` rows write but `log_entries` stays empty" symptom.
 
 ## Consuming-application host wiring
 
@@ -86,10 +89,11 @@ builder.Services.AddSingleton<ILoggingDatabaseFactory, FooLoggingDatabaseFactory
 //    bearing.
 builder.Logging.AddRoadbedDbLogging();
 
-// 3. Discover and run every IServiceCollectionInstaller, including
-//    InstallExtensionsLogging (Roadbed.Common) and InstallLogging
-//    (Roadbed.Logging). InstallLogging eagerly constructs the shared
-//    LoggingChannel instance and registers it as a singleton.
+// 3. Discover and run every IServiceCollectionInstaller. The referenced
+//    provider package (Roadbed.Logging.MySql or Roadbed.Logging.Sqlite)
+//    contributes InstallLoggingMySql / InstallLoggingSqlite, which registers
+//    the ILoggingDataExecutor and then calls LoggingModule.Register to wire
+//    the repositories, the shared LoggingChannel, and the background writer.
 builder.Services.InstallModulesInAppDomain(builder.Configuration);
 
 using var host = builder.Build();
@@ -106,7 +110,9 @@ Set `ILoggingDatabaseFactory.Connecion.ConnectionStringType` to one of:
 | `DataConnectionStringType.SQLite`                           | Local/dev only. No partitioning; retention is a scheduled `DELETE` job.                          |
 | `DataConnectionStringType.SQLiteInMemory`                   | Test harness only. Same as SQLite but the database vanishes when the connection closes.          |
 
-`Postgres`, `Unknown`, and any other value cause `InstallLogging` to throw `InvalidOperationException` at install time.
+The chosen value must match the referenced provider package: `Roadbed.Logging.MySql` for `MySQL`, `Roadbed.Logging.Sqlite` for `SQLite` / `SQLiteInMemory`. There is no Postgres provider package; a `Postgres`/`Unknown` connection has no executor and fails at first query.
+
+> **Package layout (since the provider split).** `Roadbed.Logging` is provider-neutral — it depends only on `Roadbed.Data` (+ `.Dapper`) and carries no database client. Each provider satellite (`Roadbed.Logging.MySql`, `Roadbed.Logging.Sqlite`) references core plus the matching `Roadbed.Data.*` client and supplies an `ILoggingDataExecutor` adapter behind an auto-discovered installer. A MySQL-only host therefore never pulls in the SQLite native binaries, and vice-versa. The repositories, activity service, channel, exporter, and DDL assets all live in core; only the executor adapter and installer live in the satellites.
 
 ### Database setup (MySQL example)
 

@@ -15,6 +15,7 @@ internal sealed class LoggingActivityInputRepository
 {
     #region Private Fields
 
+    private readonly ILoggingDataExecutor _executor;
     private readonly ILoggingDatabaseFactory _factory;
     private readonly string _tableRef;
 
@@ -25,18 +26,22 @@ internal sealed class LoggingActivityInputRepository
     /// <summary>
     /// Initializes a new instance of the <see cref="LoggingActivityInputRepository"/> class.
     /// </summary>
+    /// <param name="executor">Provider-neutral execution port supplied by the active provider satellite.</param>
     /// <param name="factory">Database connection factory pointing at the activity schema.</param>
     /// <param name="options">Host-supplied logging options.</param>
     /// <param name="logger">Logger used for retry diagnostics on the data path.</param>
     public LoggingActivityInputRepository(
+        ILoggingDataExecutor executor,
         ILoggingDatabaseFactory factory,
         LoggingOptions options,
         ILogger<LoggingActivityInputRepository> logger)
         : base(logger)
     {
+        ArgumentNullException.ThrowIfNull(executor);
         ArgumentNullException.ThrowIfNull(factory);
         ArgumentNullException.ThrowIfNull(options);
 
+        this._executor = executor;
         this._factory = factory;
         this._tableRef = string.IsNullOrWhiteSpace(options.Schema)
             ? "activity_input"
@@ -102,7 +107,7 @@ internal sealed class LoggingActivityInputRepository
             },
         };
 
-        await LoggingSqlDispatcher
+        await this._executor
             .ExecuteAsync(request, this._factory, this.Logger, cancellationToken)
             .ConfigureAwait(false);
     }

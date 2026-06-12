@@ -19,20 +19,6 @@
     <WarningLevel>9999</WarningLevel>
   </PropertyGroup>
 
-	<ItemGroup>
-		<InternalsVisibleTo Include="Roadbed.Logging.MySql" />
-		<InternalsVisibleTo Include="Roadbed.Logging.Sqlite" />
-		<InternalsVisibleTo Include="Roadbed.Test.Unit" />
-		<InternalsVisibleTo Include="Roadbed.Test.Integration" />
-		<InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
-	</ItemGroup>
-
-  <ItemGroup>
-    <None Include="Assets\Tables\**\*.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="5.3.0">
       <PrivateAssets>all</PrivateAssets>
@@ -42,14 +28,6 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.8" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.8" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.8" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.8" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.8" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
-    <PackageReference Include="OpenTelemetry" Version="1.15.3" />
-    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.15.3" />
     <PackageReference Include="SonarAnalyzer.CSharp" Version="10.27.0.140913">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -61,9 +39,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Roadbed.Common\Roadbed.Common.csproj" />
-    <ProjectReference Include="..\Roadbed.Data\Roadbed.Data.csproj" />
-    <ProjectReference Include="..\Roadbed.Data.Dapper\Roadbed.Data.Dapper.csproj" />
+    <ProjectReference Include="..\Roadbed.Data.MySql\Roadbed.Data.MySql.csproj" />
+    <ProjectReference Include="..\Roadbed.Logging\Roadbed.Logging.csproj" />
   </ItemGroup>
 
 </Project>

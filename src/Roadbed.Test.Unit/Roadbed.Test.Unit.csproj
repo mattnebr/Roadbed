@@ -58,6 +58,8 @@
 		<ProjectReference Include="..\Roadbed.IO.Csv\Roadbed.IO.Csv.csproj" />
 		<ProjectReference Include="..\Roadbed.IO\Roadbed.IO.csproj" />
 		<ProjectReference Include="..\Roadbed.Logging\Roadbed.Logging.csproj" />
+		<ProjectReference Include="..\Roadbed.Logging.MySql\Roadbed.Logging.MySql.csproj" />
+		<ProjectReference Include="..\Roadbed.Logging.Sqlite\Roadbed.Logging.Sqlite.csproj" />
 		<ProjectReference Include="..\Roadbed.Messaging\Roadbed.Messaging.csproj" />
 		<ProjectReference Include="..\Roadbed.Net\Roadbed.Net.csproj" />
 		<ProjectReference Include="..\Roadbed.Scheduling\Roadbed.Scheduling.csproj" />

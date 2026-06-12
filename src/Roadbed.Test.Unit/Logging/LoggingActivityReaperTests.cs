@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -234,6 +235,21 @@ public class LoggingActivityReaperTests
     }
 
     /// <summary>
+    /// Test <see cref="ILoggingDataExecutor"/> that delegates straight to the
+    /// real <see cref="SqliteExecutor"/> — the same delegation the
+    /// <c>Roadbed.Logging.Sqlite</c> satellite performs — so the repository
+    /// runs genuine SQL against the in-memory database.
+    /// </summary>
+    private sealed class SqlitePassthroughExecutor : ILoggingDataExecutor
+    {
+        public Task<int> ExecuteAsync(DataExecutorRequest request, ILoggingDatabaseFactory factory, ILogger logger, CancellationToken cancellationToken) =>
+            SqliteExecutor.ExecuteAsync(request, factory, logger, cancellationToken);
+
+        public Task<IEnumerable<T>> QueryAsync<T>(DataExecutorRequest request, ILoggingDatabaseFactory factory, ILogger logger, CancellationToken cancellationToken) =>
+            SqliteExecutor.QueryAsync<T>(request, factory, logger, cancellationToken);
+    }
+
+    /// <summary>
     /// Projection of the columns the assertions read back.
     /// </summary>
     private sealed class ActivityRow
@@ -300,6 +316,7 @@ public class LoggingActivityReaperTests
             };
 
             var repository = new LoggingActivityRepository(
+                new SqlitePassthroughExecutor(),
                 factory,
                 options,
                 NullLogger<LoggingActivityRepository>.Instance);

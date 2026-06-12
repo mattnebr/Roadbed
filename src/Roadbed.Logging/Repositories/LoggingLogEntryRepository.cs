@@ -55,6 +55,7 @@ internal sealed class LoggingLogEntryRepository
         ",host" +
         ",process_id";
 
+    private readonly ILoggingDataExecutor _executor;
     private readonly ILoggingDatabaseFactory _factory;
     private readonly string _tableRef;
     private readonly int _maxRowsPerChunk;
@@ -66,18 +67,22 @@ internal sealed class LoggingLogEntryRepository
     /// <summary>
     /// Initializes a new instance of the <see cref="LoggingLogEntryRepository"/> class.
     /// </summary>
+    /// <param name="executor">Provider-neutral execution port supplied by the active provider satellite.</param>
     /// <param name="factory">Database connection factory pointing at the log_entries schema.</param>
     /// <param name="options">Host-supplied logging options.</param>
     /// <param name="logger">Logger used for retry diagnostics on the data path.</param>
     public LoggingLogEntryRepository(
+        ILoggingDataExecutor executor,
         ILoggingDatabaseFactory factory,
         LoggingOptions options,
         ILogger<LoggingLogEntryRepository> logger)
         : base(logger)
     {
+        ArgumentNullException.ThrowIfNull(executor);
         ArgumentNullException.ThrowIfNull(factory);
         ArgumentNullException.ThrowIfNull(options);
 
+        this._executor = executor;
         this._factory = factory;
         this._tableRef = string.IsNullOrWhiteSpace(options.Schema)
             ? "log_entries"
@@ -253,7 +258,7 @@ internal sealed class LoggingLogEntryRepository
             Parameters = parameters,
         };
 
-        return await LoggingSqlDispatcher
+        return await this._executor
             .ExecuteAsync(request, this._factory, this.Logger, cancellationToken)
             .ConfigureAwait(false);
     }

@@ -36,6 +36,7 @@ public class LoggingLogEntryRepositoryTests
 
         // Act (When)
         var repository = new LoggingLogEntryRepository(
+            Mock.Of<ILoggingDataExecutor>(),
             factory,
             options,
             NullLogger<LoggingLogEntryRepository>.Instance);
@@ -55,6 +56,7 @@ public class LoggingLogEntryRepositoryTests
         var options = new LoggingOptions { Schema = "ops" };
         var factory = BuildFactory(DataConnectionStringType.MySQL);
         var repository = new LoggingLogEntryRepository(
+            Mock.Of<ILoggingDataExecutor>(),
             factory,
             options,
             NullLogger<LoggingLogEntryRepository>.Instance);
@@ -81,6 +83,7 @@ public class LoggingLogEntryRepositoryTests
         var options = new LoggingOptions { Schema = string.Empty };
         var factory = BuildFactory(DataConnectionStringType.SQLite);
         var repository = new LoggingLogEntryRepository(
+            Mock.Of<ILoggingDataExecutor>(),
             factory,
             options,
             NullLogger<LoggingLogEntryRepository>.Instance);
@@ -156,6 +159,7 @@ public class LoggingLogEntryRepositoryTests
         var options = new LoggingOptions();
         var factory = BuildFactory(DataConnectionStringType.MySQL);
         var repository = new LoggingLogEntryRepository(
+            Mock.Of<ILoggingDataExecutor>(),
             factory,
             options,
             NullLogger<LoggingLogEntryRepository>.Instance);

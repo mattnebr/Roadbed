@@ -25,6 +25,7 @@ internal sealed class LoggingActivityRepository
     private static readonly string RunningStatusValue =
         LoggingActivityStatus.Running.ToString().ToLowerInvariant();
 
+    private readonly ILoggingDataExecutor _executor;
     private readonly ILoggingDatabaseFactory _factory;
     private readonly string _tableRef;
 
@@ -35,18 +36,22 @@ internal sealed class LoggingActivityRepository
     /// <summary>
     /// Initializes a new instance of the <see cref="LoggingActivityRepository"/> class.
     /// </summary>
+    /// <param name="executor">Provider-neutral execution port supplied by the active provider satellite.</param>
     /// <param name="factory">Database connection factory pointing at the activity schema.</param>
     /// <param name="options">Host-supplied logging options.</param>
     /// <param name="logger">Logger used for retry diagnostics on the data path.</param>
     public LoggingActivityRepository(
+        ILoggingDataExecutor executor,
         ILoggingDatabaseFactory factory,
         LoggingOptions options,
         ILogger<LoggingActivityRepository> logger)
         : base(logger)
     {
+        ArgumentNullException.ThrowIfNull(executor);
         ArgumentNullException.ThrowIfNull(factory);
         ArgumentNullException.ThrowIfNull(options);
 
+        this._executor = executor;
         this._factory = factory;
         this._tableRef = string.IsNullOrWhiteSpace(options.Schema)
             ? "activity"
@@ -163,7 +168,7 @@ internal sealed class LoggingActivityRepository
             },
         };
 
-        await LoggingSqlDispatcher
+        await this._executor
             .ExecuteAsync(request, this._factory, this.Logger, cancellationToken)
             .ConfigureAwait(false);
     }
@@ -222,7 +227,7 @@ internal sealed class LoggingActivityRepository
             Parameters = parameters,
         };
 
-        await LoggingSqlDispatcher
+        await this._executor
             .ExecuteAsync(executorRequest, this._factory, this.Logger, cancellationToken)
             .ConfigureAwait(false);
     }
@@ -260,7 +265,7 @@ internal sealed class LoggingActivityRepository
             Parameters = parameters,
         };
 
-        await LoggingSqlDispatcher
+        await this._executor
             .ExecuteAsync(request, this._factory, this.Logger, cancellationToken)
             .ConfigureAwait(false);
     }
@@ -307,7 +312,7 @@ internal sealed class LoggingActivityRepository
             Parameters = parameters,
         };
 
-        await LoggingSqlDispatcher
+        await this._executor
             .ExecuteAsync(request, this._factory, this.Logger, cancellationToken)
             .ConfigureAwait(false);
     }
@@ -355,7 +360,7 @@ internal sealed class LoggingActivityRepository
             Parameters = parameters,
         };
 
-        await LoggingSqlDispatcher
+        await this._executor
             .ExecuteAsync(request, this._factory, this.Logger, cancellationToken)
             .ConfigureAwait(false);
     }
@@ -398,7 +403,7 @@ internal sealed class LoggingActivityRepository
             Parameters = parameters,
         };
 
-        IEnumerable<string> ids = await LoggingSqlDispatcher
+        IEnumerable<string> ids = await this._executor
             .QueryAsync<string>(request, this._factory, this.Logger, cancellationToken)
             .ConfigureAwait(false);
 
@@ -458,7 +463,7 @@ internal sealed class LoggingActivityRepository
             Parameters = parameters,
         };
 
-        await LoggingSqlDispatcher
+        await this._executor
             .ExecuteAsync(request, this._factory, this.Logger, cancellationToken)
             .ConfigureAwait(false);
     }

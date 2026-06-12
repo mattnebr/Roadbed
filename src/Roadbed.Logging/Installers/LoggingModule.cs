@@ -1,46 +1,67 @@
 namespace Roadbed.Logging.Installers;
 
 using System;
-using Microsoft.Extensions.Configuration;
+using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Hosting;
 using Roadbed.Data;
 
 /// <summary>
-/// Auto-discovered service collection installer that wires the
-/// Roadbed.Logging activity service, repositories, channel, and background
-/// writer into the host's DI container.
+/// Provider-neutral wiring for the Roadbed.Logging activity service,
+/// repositories, channel, and background writer.
 /// </summary>
 /// <remarks>
+/// <para>
+/// This type is <strong>not</strong> an auto-discovered
+/// <c>IServiceCollectionInstaller</c>. The core <c>Roadbed.Logging</c>
+/// assembly cannot decide which database client to load, so a provider
+/// satellite owns the auto-discovered installer: it registers an
+/// <see cref="ILoggingDataExecutor"/> first, then calls
+/// <see cref="Register"/>. Keeping the executor registration ahead of this
+/// call guarantees it is present in the <c>ServiceLocator</c> snapshot this
+/// method captures.
+/// </para>
 /// <para>
 /// The OpenTelemetry pipeline portion of the registration lives on the
 /// companion <c>builder.Logging.AddRoadbedDbLogging()</c> extension method
 /// because MEL needs <see cref="Microsoft.Extensions.Logging.ILoggingBuilder"/>,
-/// which an <see cref="IServiceCollectionInstaller"/> does not see.
-/// </para>
-/// <para>
-/// The installer resolves <see cref="LoggingOptions"/> and
-/// <see cref="ILoggingDatabaseFactory"/> from the host registrations before
-/// the rest of the pipeline runs. Both must be registered by the host
-/// before <c>InstallModulesInAppDomain</c> executes; otherwise the
-/// installer throws.
+/// which an installer does not see.
 /// </para>
 /// </remarks>
-public class InstallLogging : IServiceCollectionInstaller
+public static class LoggingModule
 {
     #region Public Methods
 
-    /// <inheritdoc/>
-    public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
+    /// <summary>
+    /// Wires the provider-neutral Roadbed.Logging services into the supplied
+    /// collection. Call this from a provider satellite's installer
+    /// <em>after</em> registering an <see cref="ILoggingDataExecutor"/>.
+    /// </summary>
+    /// <param name="services">The host's service collection.</param>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when no <see cref="ILoggingDataExecutor"/> has been registered,
+    /// when the required <see cref="LoggingOptions"/> /
+    /// <see cref="ILoggingDatabaseFactory"/> host registrations are missing.
+    /// </exception>
+    public static void Register(IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
+
+        // The provider satellite must register its executor before calling
+        // Register; absence means the satellite installer is misordered or a
+        // consumer wired Register directly without a provider package.
+        if (!services.Any(d => d.ServiceType == typeof(ILoggingDataExecutor)))
+        {
+            throw new InvalidOperationException(
+                $"Roadbed.Logging requires an {nameof(ILoggingDataExecutor)} to be registered " +
+                "before wiring. Reference exactly one provider package " +
+                "(Roadbed.Logging.MySql or Roadbed.Logging.Sqlite); its installer registers the executor.");
+        }
 
         // Resolve host registrations up-front so we can validate them and
         // wire concrete repository implementations into DI before any
         // hosted-service start signal fires.
         LoggingOptions options;
-        ILoggingDatabaseFactory factory;
 
         using (var setupProvider = services.BuildServiceProvider())
         {
@@ -49,13 +70,11 @@ public class InstallLogging : IServiceCollectionInstaller
                     $"Roadbed.Logging requires a singleton {nameof(LoggingOptions)} to be " +
                     $"registered before InstallModulesInAppDomain runs.");
 
-            factory = setupProvider.GetService<ILoggingDatabaseFactory>()
+            _ = setupProvider.GetService<ILoggingDatabaseFactory>()
                 ?? throw new InvalidOperationException(
                     $"Roadbed.Logging requires a singleton {nameof(ILoggingDatabaseFactory)} " +
                     $"to be registered before InstallModulesInAppDomain runs.");
         }
-
-        ValidateProvider(factory);
 
         // Register the Dapper [Column] mapping for the three entities so
         // any future read paths (and the integration test suite) materialize
@@ -65,7 +84,8 @@ public class InstallLogging : IServiceCollectionInstaller
             typeof(LoggingActivityInput),
             typeof(LoggingLogEntry));
 
-        // Repositories — internal sealed; one instance per process.
+        // Repositories — internal sealed; one instance per process. Each
+        // depends on the satellite-supplied ILoggingDataExecutor.
         services.TryAddSingleton<ILoggingActivityRepository, LoggingActivityRepository>();
         services.TryAddSingleton<ILoggingActivityInputRepository, LoggingActivityInputRepository>();
         services.TryAddSingleton<ILoggingLogEntryRepository, LoggingLogEntryRepository>();
@@ -96,31 +116,4 @@ public class InstallLogging : IServiceCollectionInstaller
     }
 
     #endregion Public Methods
-
-    #region Private Methods
-
-    /// <summary>
-    /// Throws when the host-supplied database factory targets a provider
-    /// Roadbed.Logging does not support in v1.
-    /// </summary>
-    /// <param name="factory">The factory the installer is about to register.</param>
-    private static void ValidateProvider(ILoggingDatabaseFactory factory)
-    {
-        DataConnectionStringType type = factory.Connecion.ConnectionStringType;
-
-        switch (type)
-        {
-            case DataConnectionStringType.MySQL:
-            case DataConnectionStringType.SQLite:
-            case DataConnectionStringType.SQLiteInMemory:
-                return;
-
-            default:
-                throw new InvalidOperationException(
-                    $"Roadbed.Logging does not support {nameof(DataConnectionStringType)} " +
-                    $"'{type}'. Supported providers in v1 are MySQL and SQLite.");
-        }
-    }
-
-    #endregion Private Methods
 }

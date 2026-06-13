@@ -12,6 +12,32 @@ using System.Linq;
 [TestClass]
 public class ServiceCollectionExtensionsTests
 {
+    #region InstallModule Tests
+
+    /// <summary>
+    /// Verifies that the typed <c>InstallModule&lt;TInstaller&gt;</c> runs
+    /// exactly the named installer — the deterministic, compile-pinned
+    /// alternative to assembly auto-discovery for vendored satellites.
+    /// </summary>
+    [TestMethod]
+    public void InstallModule_NamedInstaller_RunsThatInstaller()
+    {
+        // Arrange (Given)
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder().Build();
+
+        // Act (When)
+        IServiceCollection returned = services.InstallModule<TestInstaller1>(configuration);
+
+        // Assert (Then)
+        Assert.AreSame(services, returned, "InstallModule should return the same collection for chaining.");
+        using var provider = services.BuildServiceProvider();
+        Assert.IsNotNull(provider.GetService<TestService1>(), "The named installer's services must be registered.");
+        Assert.IsNull(provider.GetService<TestService2>(), "Only the named installer runs — not every installer in the assembly.");
+    }
+
+    #endregion InstallModule Tests
+
     #region InstallFromAssembly Tests
 
     /// <summary>

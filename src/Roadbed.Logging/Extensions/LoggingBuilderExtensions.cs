@@ -1,6 +1,7 @@
 namespace Roadbed.Logging;
 
 using System;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
@@ -22,11 +23,54 @@ using OpenTelemetry.Logs;
 /// </remarks>
 public static class LoggingBuilderExtensions
 {
+    #region Private Fields
+
+    /// <summary>
+    /// Empty configuration handed to the provider satellite installer — the
+    /// Roadbed.Logging provider installers do not read configuration, and the
+    /// <see cref="ILoggingBuilder"/> seam has no <see cref="IConfiguration"/>
+    /// to forward.
+    /// </summary>
+    private static readonly IConfiguration EmptyConfiguration = new ConfigurationBuilder().Build();
+
+    #endregion Private Fields
+
     #region Public Methods
 
     /// <summary>
-    /// Registers the OpenTelemetry MEL provider with batching and the
-    /// Roadbed.Logging database exporter.
+    /// Wires the Roadbed.Logging OpenTelemetry exporter <em>and</em> selects
+    /// the database provider in one call by naming its satellite installer.
+    /// </summary>
+    /// <typeparam name="TProviderInstaller">The provider satellite installer — <c>InstallLoggingMySql</c> or <c>InstallLoggingSqlite</c>. Naming the concrete type compile-pins the satellite assembly, so it loads and wires without relying on assembly auto-discovery.</typeparam>
+    /// <param name="builder">The host's logging builder.</param>
+    /// <param name="configureOptions">Optional callback to tweak the underlying <see cref="OpenTelemetryLoggerOptions"/>.</param>
+    /// <returns>The same <paramref name="builder"/> for fluent chaining.</returns>
+    /// <remarks>
+    /// This is the single authoritative wiring call. Register the singleton
+    /// <see cref="LoggingOptions"/> and <see cref="ILoggingDatabaseFactory"/>
+    /// <strong>before</strong> calling it; the provider installer runs the
+    /// rest of the pipeline (executor, repositories, channel, writer) eagerly.
+    /// No <c>typeof(...)</c> discard, manual <c>Assembly.Load</c>, or
+    /// auto-discovery pass is required to make the provider discoverable.
+    /// </remarks>
+    public static ILoggingBuilder AddRoadbedDbLogging<TProviderInstaller>(
+        this ILoggingBuilder builder,
+        Action<OpenTelemetryLoggerOptions>? configureOptions = null)
+        where TProviderInstaller : IServiceCollectionInstaller, new()
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        AddRoadbedDbLogging(builder, configureOptions);
+        builder.Services.InstallModule<TProviderInstaller>(EmptyConfiguration);
+
+        return builder;
+    }
+
+    /// <summary>
+    /// Registers the OpenTelemetry MEL provider and the Roadbed.Logging
+    /// database exporter, without selecting a provider. Prefer the generic
+    /// <see cref="AddRoadbedDbLogging{TProviderInstaller}"/> overload, which
+    /// also wires the provider in the same call.
     /// </summary>
     /// <param name="builder">The host's logging builder.</param>
     /// <param name="configureOptions">Optional callback that lets the host tweak the underlying <see cref="OpenTelemetryLoggerOptions"/> (e.g. to switch scope inclusion off).</param>

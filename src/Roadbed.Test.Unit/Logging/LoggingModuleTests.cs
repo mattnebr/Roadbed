@@ -44,6 +44,30 @@ public class LoggingModuleTests
     }
 
     /// <summary>
+    /// Verifies the single-call consumer contract: naming the provider
+    /// satellite installer as a type argument to
+    /// <c>AddRoadbedDbLogging&lt;TProviderInstaller&gt;()</c> wires both the
+    /// OTel exporter and the provider — no auto-discovery, no type-touch.
+    /// </summary>
+    [TestMethod]
+    public void AddRoadbedDbLoggingGeneric_WiresExecutorAndPipeline()
+    {
+        // Arrange (Given)
+        var services = new ServiceCollection();
+        services.AddSingleton(new LoggingOptions { Application = "test" });
+        services.AddSingleton<ILoggingDatabaseFactory>(BuildFactory(DataConnectionStringType.SQLite));
+
+        // Act (When) — the one line a consumer host writes.
+        services.AddLogging(b => b.AddRoadbedDbLogging<InstallLoggingSqlite>());
+
+        // Assert (Then)
+        using var provider = services.BuildServiceProvider();
+        Assert.IsNotNull(provider.GetService<ILoggingDataExecutor>(), "The named satellite must register the execution port.");
+        Assert.IsNotNull(provider.GetService<ILoggingActivityRepository>(), "Repositories must resolve with the satellite-supplied executor injected.");
+        Assert.IsNotNull(provider.GetRequiredService<LoggingChannel>());
+    }
+
+    /// <summary>
     /// Verifies the SQLite satellite installer registers an executor and then
     /// wires the full pipeline so the activity service resolves end-to-end.
     /// </summary>

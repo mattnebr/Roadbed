@@ -100,12 +100,18 @@ catch (Exception ex)
 
 ## Supported providers
 
-This core package is **provider-neutral** — it depends only on `Roadbed.Data` (+ `.Dapper`) and carries no database client. Reference exactly one provider satellite alongside it; the satellite brings the client and an auto-discovered installer that registers an `ILoggingDataExecutor` and calls `LoggingModule.Register`:
+This core package is **provider-neutral** — it depends only on `Roadbed.Data` (+ `.Dapper`) and carries no database client. Reference exactly one provider satellite alongside it; the satellite brings the client and the `ILoggingDataExecutor` adapter:
 
 - **`Roadbed.Logging.MySql`** — MySQL / MariaDB (brings MySqlConnector). Primary target; `log_entries` is RANGE-partitioned monthly for 90-day retention via `DROP PARTITION`.
 - **`Roadbed.Logging.Sqlite`** — SQLite for local/dev (brings Microsoft.Data.Sqlite). No native partitioning; retention is a scheduled `DELETE` against `event_time_utc`.
 
-A MySQL-only host never pulls in the SQLite native binaries, and vice-versa. There is no Postgres provider package; an unmatched connection type has no executor and fails at first query.
+Wire logging — and select the provider — with a single typed call that names the satellite installer:
+
+```csharp
+builder.Logging.AddRoadbedDbLogging<InstallLoggingMySql>();   // or <InstallLoggingSqlite>
+```
+
+Naming the type compile-pins the satellite assembly, so it loads and wires deterministically even when vendored via `HintPath` — no `typeof` discard, manual `Assembly.Load`, or auto-discovery pass is required. A MySQL-only host never pulls in the SQLite native binaries, and vice-versa. There is no Postgres provider package; an unmatched connection type has no executor and fails at first query.
 
 ## See also
 
